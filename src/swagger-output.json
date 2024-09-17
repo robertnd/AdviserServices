@@ -1,0 +1,1057 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Adviser API",
+    "version": "1.0.0",
+    "description": "Docs for Adviser API"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:19090/api/v1",
+      "description": "Serving Address"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Adviser": {
+        "type": "object",
+        "required": [
+          "city",
+          "country",
+          "date_of_birth",
+          "full_names",
+          "id_number",
+          "id_type",
+          "partner_number",
+          "intermediary_type",
+          "kra_pin",
+          "account_no",
+          "primary_address",
+          "primary_email",
+          "mobile_no"
+        ],
+        "properties": {
+          "account_no": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "date_of_birth": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "full_names": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "id_number": {
+            "type": "string"
+          },
+          "id_type": {
+            "type": "string"
+          },
+          "intermediary_type": {
+            "type": "string"
+          },
+          "kra_pin": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "load_date": {
+            "type": "string"
+          },
+          "mobile_no": {
+            "type": "string"
+          },
+          "partner_number": {
+            "type": "string"
+          },
+          "primary_address": {
+            "type": "string"
+          },
+          "primary_email": {
+            "type": "string"
+          },
+          "primary_phone": {
+            "type": "string"
+          },
+          "secondary_address": {
+            "type": "string"
+          },
+          "secondary_city": {
+            "type": "string"
+          },
+          "secondary_email": {
+            "type": "string"
+          },
+          "secondary_mobile": {
+            "type": "string"
+          },
+          "secondary_phone": {
+            "type": "string"
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "epid",
+          "user_id",
+          "create_date",
+          "event_type",
+          "endpoint",
+          "direction"
+        ],
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "trace_id": {
+            "type": "string"
+          },
+          "create_date": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "process": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "FullEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "epid",
+          "user_id",
+          "create_date",
+          "event_type",
+          "endpoint",
+          "direction"
+        ],
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "epid": {
+            "type": "number"
+          },
+          "trace_id": {
+            "type": "string"
+          },
+          "create_date": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "process": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "request": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "response": {
+            "type": "string"
+          }
+        }
+      },
+      "AdviserQuery": {
+        "type": "object",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "type": "kraPin | mobileNo | idNumber"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "SignIn": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "password",
+          "email"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateAdmin": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "password",
+          "email"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "RootSignIn": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "secret",
+          "email"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "AdviserStatusUpdate": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "status"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminStatusUpdate": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "status"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Success": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "any"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "errorData": {
+            "type": "any"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/adviser/register-adviser": {
+      "post": {
+        "summary": "Registers an existing adviser",
+        "description": "Registers an existing adviser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Adviser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adviser/query-platform-adviser": {
+      "post": {
+        "summary": "Query adviser details",
+        "description": "Returns adviser details from the data platform",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdviserQuery"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adviser/get-adviser/{user_id}": {
+      "get": {
+        "summary": "Returns adviser data from data-platform (external)",
+        "description": "Fetch a single adviser matching the user_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "user_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adviser entity matching user_id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "advisers": {
+                      "type": "object",
+                      "schema": {
+                        "$ref": "#/components/schemas/Adviser"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/adviser/sign-in": {
+      "post": {
+        "summary": "Sign-In",
+        "description": "Sign-In, get valid bearer token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/root-sign-in": {
+      "post": {
+        "summary": "Root sign-In",
+        "description": "Sign-In for Root user, authenticates and issues a valid bearer token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RootSignIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/admin-sign-in": {
+      "post": {
+        "summary": "Admin sign-In",
+        "description": "Sign-In for Admin user, authenticates and issues a valid bearer token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/create-admin": {
+      "post": {
+        "summary": "Creates a new Admin",
+        "description": "Creates a new Admin. Must be logged in as Root to complete this action",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdmin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/update-admin-status": {
+      "post": {
+        "summary": "Updates the status of an Admin",
+        "description": "Updates the status of an Admin. Must be logged in as Root to complete this action",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/get-advisers/{page}/{limit}": {
+      "get": {
+        "summary": "Returns a list of advisers",
+        "description": "Fetch a paginated list of items with limit and page parameters",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "path",
+            "description": "The page number. Defaults to 1 if not provided.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "path",
+            "description": "The number of items to display per page. Defaults to 25 if not provided.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of advisers (paginated)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 1
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 10
+                    },
+                    "totalItems": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 100
+                    },
+                    "totalPages": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 10
+                    },
+                    "advisers": {
+                      "type": "array",
+                      "advisers": {
+                        "type": "object",
+                        "schema": {
+                          "$ref": "#/components/schemas/Adviser"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/admin/update-adviser-status": {
+      "post": {
+        "summary": "Update adviser status",
+        "description": "Update adviser status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdviserStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Adviser found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/get-adviser/{user_id}": {
+      "get": {
+        "summary": "Returns adviser data",
+        "description": "Fetch a single adviser matching the user_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "user_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adviser entity matching user_id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "advisers": {
+                      "type": "object",
+                      "schema": {
+                        "$ref": "#/components/schemas/Adviser"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/admin/get-events/{page}/{limit}": {
+      "get": {
+        "summary": "Returns a list of events",
+        "description": "Fetch a paginated list of items with limit and page parameters.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "path",
+            "description": "The page number. Defaults to 1 if not provided.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "path",
+            "description": "The number of items to display per page. Defaults to 25 if not provided.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of events (paginated)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 1
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 10
+                    },
+                    "totalItems": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 100
+                    },
+                    "totalPages": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 10
+                    },
+                    "events": {
+                      "type": "array",
+                      "events": {
+                        "type": "object",
+                        "schema": {
+                          "$ref": "#/components/schemas/Event"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/admin/get-event/{event_id}": {
+      "get": {
+        "summary": "Returns adviser data",
+        "description": "Fetch a single adviser matching the user_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "description": "event_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event matching event_id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "event": {
+                      "type": "object",
+                      "schema": {
+                        "$ref": "#/components/schemas/FullEvent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A client error occurred"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}
