@@ -103,11 +103,10 @@ const swaggerOptions: Options = {
                 },
                 SignIn: {
                     type: 'object',
-                    required: ['user_id', 'password', 'email'],
+                    required: ['user_id', 'password'],
                     properties: {
                         user_id: { type: 'string' },
-                        password: { type: 'string' },
-                        email: { type: 'string' }
+                        password: { type: 'string' }
                     }
                 },
                 CreateAdmin: {
@@ -121,11 +120,10 @@ const swaggerOptions: Options = {
                 },
                 RootSignIn: {
                     type: 'object',
-                    required: ['user_id', 'secret', 'email'],
+                    required: ['user_id', 'secret'],
                     properties: {
                         user_id: { type: 'string' },
-                        secret: { type: 'string' },
-                        email: { type: 'string' }
+                        secret: { type: 'string' }
                     }
                 },
                 AdviserStatusUpdate: {

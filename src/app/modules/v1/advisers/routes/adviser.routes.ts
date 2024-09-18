@@ -40,7 +40,7 @@ const router = express.Router()
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/register-adviser", verifyToken, AdviserController.registerAdviser)
+router.post("/register-adviser", AdviserController.registerAdviser)
 
 /**
  * @swagger
@@ -76,7 +76,7 @@ router.post("/register-adviser", verifyToken, AdviserController.registerAdviser)
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/query-platform-adviser", verifyToken, AdviserController.queryPlatformAdviser)
+router.post("/query-platform-adviser", AdviserController.queryPlatformAdviser)
 
 /**
  * @swagger

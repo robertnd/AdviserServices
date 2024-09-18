@@ -79,6 +79,8 @@ router.post("/admin-sign-in", AdminController.adminSignIn)
  *   post:
  *     summary: Creates a new Admin
  *     description: Creates a new Admin. Must be logged in as Root to complete this action
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
