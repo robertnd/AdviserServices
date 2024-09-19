@@ -55,6 +55,19 @@ const swaggerOptions: Options = {
                         secondary_phone: { type: 'string' }
                     }
                 },
+                Admin: {
+                    type: 'object',
+                    required: [
+                        'id', 'user_id', 'email', 'status', 'create_date'
+                    ],
+                    properties: {
+                        id: { type: 'integer' },
+                        user_id: { type: 'string' },
+                        email: { type: 'string' },
+                        status: { type: 'string' },
+                        create_date: { type: 'string' }
+                    }
+                },
                 Event: {
                     type: 'object',
                     required: [

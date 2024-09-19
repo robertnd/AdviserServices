@@ -147,6 +147,68 @@ router.post("/update-admin-status", verifyToken, isRoot, AdminController.updateA
 
 /**
  * @swagger
+ * /admin/get-admins/{page}/{limit}:
+ *   get:
+ *     summary: Returns a list of administrators
+ *     description: Fetch a paginated list of items with limit and page parameters
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: limit
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: A list of administrators (paginated)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 limit:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 totalItems:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 advisers:
+ *                   type: array
+ *                   advisers:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Admin'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-admins/:page/:limit", verifyToken, isAdmin, AdminController.getAdminsWithPaging)
+
+/**
+ * @swagger
  * /admin/get-advisers/{page}/{limit}:
  *   get:
  *     summary: Returns a list of advisers
@@ -372,4 +434,5 @@ router.get("/get-events/:page/:limit", verifyToken, isAdmin, AdminController.get
  *         description: Server error
  */
 router.get("/get-event/:event_id", verifyToken, isAdmin, AdminController.getEvent)
+
 export const AdminRoutes = router

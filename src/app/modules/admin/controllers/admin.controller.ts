@@ -388,6 +388,34 @@ const getEvent = async (req: express.Request, res: express.Response<ApiResponse<
 
 }
 
+const getAdminsWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const { page, limit } = req.params
+
+        // Arggh this is very ugly
+        const cfg_page_size = parseInt(config.page_size as string) || 25
+        const vPage = (parseInt(page as string) || 0)
+        const vLimit = (parseInt(limit as string) || 0)
+        var new_limit = 0, new_page = 1
+        new_page = vPage <= 0 ? 1 : vPage
+        new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+        const result = await AdminServices.getAdminsWithPaging(new_page, new_limit)
+        res.status(200).send({
+            status: 'success',
+            data: result
+        })
+        return
+    } catch (error) {
+        res.status(500).send({
+            status: 'error',
+            message: 'Error occurred',
+            errorData: error
+        })
+        return
+    }
+
+}
+
 export const AdminController = {
     rootSignIn,
     adminSignIn,
@@ -397,5 +425,6 @@ export const AdminController = {
     getAdviser,
     updateAdviserStatus,
     getEventsWithPaging,
-    getEvent
+    getEvent,
+    getAdminsWithPaging
 }
