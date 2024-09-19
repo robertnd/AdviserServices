@@ -38,32 +38,52 @@ const registerAdviser = async (req: express.Request<{}, {}, RegistrationDto>, re
             })
             return
         }
-        if ( validationResult.success && credsCheckResult.success ) {
+        if (validationResult.success && credsCheckResult.success) {
+
+            const validOtp = UtilServices.getOTP(otp)
+            if (!validOtp.success) {
+                res.status(400).send({
+                    status: 'error',
+                    message: `OTP ${otp} is not valid`
+                })
+                return
+            }
             // check exists
             let foundResults = await AdviserServices.checkIfAdviserExists(user_id)
             if (foundResults.success && foundResults.data > 0) {
-                res.status(400).send({
-                    status: 'error',
-                    message: 'Registration failed',
-                    errorData: `Adviser with user_id: [ ${user_id} ] exists`
-                })
-                return
-            }
-            const result = await AdviserServices.createAdviser(req.body)
-            if (result.success) {
-                res.status(200).send({
-                    status: 'success',
-                    data: result.data
-                })
-                return
+                const createResult = await AdviserServices.setPassword(user_id, password)
+                if (createResult.success) {
+                    res.status(200).send({
+                        status: 'success',
+                        data: { action: 'Set Password' }
+                    })
+                    return
+                } else {
+                    res.status(500).send({
+                        status: 'error',
+                        message: 'Password reset failed',
+                        errorData: createResult.errorData
+                    })
+                    return
+                }
             } else {
-                res.status(500).send({
-                    status: 'error',
-                    message: 'Registration failed',
-                    errorData: result.errorData
-                })
-                return
+                const createResult = await AdviserServices.createAdviser(req.body)
+                if (createResult.success) {
+                    res.status(200).send({
+                        status: 'success',
+                        data: { action: 'Create Adviser' }
+                    })
+                    return
+                } else {
+                    res.status(500).send({
+                        status: 'error',
+                        message: 'Registration failed',
+                        errorData: createResult.errorData
+                    })
+                    return
+                }
             }
+
         }
     } catch (error) {
         res.status(500).send({
@@ -81,7 +101,7 @@ const queryPlatformAdviser = async (req: express.Request<{}, {}, AdviserQuery>, 
         const { key, value } = req.body
         if (key
             && value
-            && (key.toUpperCase() === 'kraPin'.toUpperCase() || key.toUpperCase() === 'mobileNo'.toUpperCase() || key.toUpperCase() === 'idNumber'.toUpperCase())
+            && (key.toUpperCase() === 'kra_pin'.toUpperCase() || key.toUpperCase() === 'mobile_no'.toUpperCase() || key.toUpperCase() === 'id_number'.toUpperCase())
         ) {
             const result = await AdviserServices.queryPlatformAdviser({ key, value })
             const user_id = getClaims(req)['sub'] || ''
@@ -185,20 +205,35 @@ const signIn = async (req: express.Request, res: express.Response<ApiResponse<an
     if (validationResult.success) {
         const result = await AdviserServices.signIn(user_id, password)
         if (result.success) {
-            const token = result.data || ''
+            const usr = await AdviserServices.getAdviser(user_id)
+            if (usr.success) {
+                const token = result.data || ''
+                const userPayload = {
+                    message: 'Login successful',
+                    authenticated: true,
+                    profileName: usr.data.names,
+                    email: usr.data.primary_email,
+                    token: {
+                        accessToken: token,
+                        validity: `${config.jwt_validity}`
+                    }
+                }
+                res.header("x-access-token", token)
+                res.status(200).send({
+                    status: 'success',
+                    data: userPayload
+                })
+            } else {
+                res.status(500).send({
+                    status: 'error',
+                    message: 'Could not get adviser detials',
+                    errorData: usr.errorData
+                })
+            }
             const storeEvent = {
                 user_id: user_id, event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'success', result: { status: 'success' }
             }
-            var eResult = UtilServices.storeEvent(storeEvent)
-            res.header("x-access-token", token)
-            res.status(200).send({
-                status: 'success',
-                data: {
-                    message: `Authenticated. Token valid for ${config.jwt_validity}`,
-                    token,
-                    validity: `${config.jwt_validity}`
-                }
-            })
+            UtilServices.storeEvent(storeEvent)
         } else {
             const storeEvent = {
                 user_id: user_id, event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'error', result: JSON.stringify(result.errorData)
@@ -209,7 +244,6 @@ const signIn = async (req: express.Request, res: express.Response<ApiResponse<an
                 message: 'Sign In failed',
                 errorData: result.errorData
             })
-
         }
     }
 }

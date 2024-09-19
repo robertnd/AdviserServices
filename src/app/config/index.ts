@@ -15,5 +15,10 @@ export default {
     db_name: process.env.DB_NAME,
     db_user: process.env.DB_USER,
     db_password: process.env.DB_PASSWORD,
-    store_events: process.env.STORE_EVENTS
+    store_events: process.env.STORE_EVENTS,
+    sms_ep: process.env.SMS_EP,
+    sms_apikey: process.env.SMS_APIKEY,
+    sms_partner_id: process.env.SMS_PARTNER_ID,
+    sms_shortcode: process.env.SMS_SHORTCODE,
+    otp_length: process.env.OTP_LENGTH
 }

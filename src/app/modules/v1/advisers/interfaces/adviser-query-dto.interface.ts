@@ -1,4 +1,5 @@
 export type AdviserQuery = {
-    key: 'kraPin' | 'mobileNo' | 'idNumber'
-    value: string
+    key: 'kra_pin' | 'mobile_no' | 'id_number'
+    value: string,
+    mobile_no?: string
   }

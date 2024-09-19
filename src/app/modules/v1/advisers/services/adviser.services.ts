@@ -31,7 +31,7 @@ const createAdviser = async (regDto: RegistrationDto): Promise<Result<any, any>>
             const insertCreds = `INSERT INTO credentials ( user_id, email, adviser_id, digest, credential_type, status ) 
             VALUES ( $1, $2, $3, $4, $5, $6 ) RETURNING *`
             var cred_type = 'Non-Individual'
-            if ( regDto.dpAdviser.gender && regDto.dpAdviser.gender !== '') {
+            if (regDto.dpAdviser.gender && regDto.dpAdviser.gender !== '') {
                 cred_type = 'Individual'
             }
             const result2: QueryResult<any> = await client.query(insertCreds, [user_id, primary_email, id, digest, cred_type, 'New'])
@@ -75,17 +75,57 @@ const createAdviser = async (regDto: RegistrationDto): Promise<Result<any, any>>
     }
 }
 
+const setPassword = async (user_id: string, password: string): Promise<Result<any, any>> => {
+
+    try {
+        const digest = await argon2.hash(password)
+        const updateCreds = `UPDATE credentials SET digest=$1 WHERE user_id=$2 RETURNING *`
+        const result = await pool.query(updateCreds, [digest, user_id])
+        const updated = result.rowCount && result.rowCount > 0 ? true : false
+        if (updated) {
+            return { success: true, data: result.rowCount }
+        } else {
+            return { success: false, errorData: `Update failed. No matching records with id ${user_id}` }
+        }
+    } catch (err) {
+        return {
+            success: false,
+            errorData: err
+        }
+    }
+
+
+
+}
+
 const queryPlatformAdviser = async (query: AdviserQuery): Promise<DataPlatformAdviser> => {
     console.log('Query Obj: ', JSON.stringify(query))
+    const { key } = query
+
+    if ( key == 'mobile_no' ) {
+        const mobile_no = query.value
+        const otp = UtilServices.generateOTP()
+        try {
+            UtilServices.addOTP(otp)
+            const resp = UtilServices.sendSMS( mobile_no, `One-time code: ${otp}`)
+            console.log(JSON.stringify(resp))
+        } catch(err) {
+            console.log(JSON.stringify(err))
+        }
+    }
+    
     var recordNum = Math.floor(Math.random() * 999) + 1
-    return fadvisers[recordNum]
+    var modded = fadvisers[recordNum]
+    modded.intermediary_type = 'Broker'
+    modded.id_type = 'National ID'
+    return modded
 }
 
 // : Promise<{ success: boolean, data?: number, errorData?: any }>
 const checkIfAdviserExists = async (user_id: string): Promise<Result<number, any>> => {
     try {
         const queryAdviser = `SELECT COUNT(*) FROM credentials WHERE user_id=$1`
-        const result: QueryResult<any> = await pool.query(queryAdviser, [ user_id ])
+        const result: QueryResult<any> = await pool.query(queryAdviser, [user_id])
         const { count } = result.rows[0]
         return {
             success: true,
@@ -105,8 +145,8 @@ const signIn = async (user_id: string, password: string): Promise<Result<string,
         let storedDigest = result.data || ''
         let valid = await argon2.verify(storedDigest, password)
         if (valid) {
-            const JWT_SECRET =  config.jwt_secret as string
-            const EXPIRES =  config.jwt_validity
+            const JWT_SECRET = config.jwt_secret as string
+            const EXPIRES = config.jwt_validity
             const jwtOptions = {
                 issuer: `${config.jwt_issuer}`,
                 subject: user_id,
@@ -138,8 +178,8 @@ const signIn = async (user_id: string, password: string): Promise<Result<string,
 const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
 
     try {
-        const queryAdviser = `SELECT * FROM all_advisers WHERE user_id=$1`
-        const result: QueryResult<any> = await pool.query(queryAdviser, [user_id])
+        const queryAdviser = `SELECT * FROM all_advisers WHERE user_id=$1 LIMIT 1`
+        const result = await pool.query(queryAdviser, [user_id])
         if (result.rows.length > 0) {
             return {
                 success: true,
@@ -159,10 +199,11 @@ const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
     }
 }
 
-export const AdviserServices = { 
-    createAdviser, 
-    queryPlatformAdviser, 
+export const AdviserServices = {
+    createAdviser,
+    queryPlatformAdviser,
     checkIfAdviserExists,
     signIn,
-    getAdviser
+    getAdviser,
+    setPassword
 }

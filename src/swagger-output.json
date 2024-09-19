@@ -222,17 +222,13 @@
         "type": "object",
         "required": [
           "user_id",
-          "password",
-          "email"
+          "password"
         ],
         "properties": {
           "user_id": {
             "type": "string"
           },
           "password": {
-            "type": "string"
-          },
-          "email": {
             "type": "string"
           }
         }
@@ -260,17 +256,13 @@
         "type": "object",
         "required": [
           "user_id",
-          "secret",
-          "email"
+          "secret"
         ],
         "properties": {
           "user_id": {
             "type": "string"
           },
           "secret": {
-            "type": "string"
-          },
-          "email": {
             "type": "string"
           }
         }
@@ -638,6 +630,11 @@
       "post": {
         "summary": "Creates a new Admin",
         "description": "Creates a new Admin. Must be logged in as Root to complete this action",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
