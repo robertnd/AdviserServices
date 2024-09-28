@@ -4,10 +4,6 @@ const nonBlank = (data: string) => data.trim() !== ''
 const literalActiveInactive = (data: string) => data.toLowerCase() !== 'active' && data.toLowerCase() != 'inactive'
 
 const rootSignIn = z.object({
-    user_id: z.string({
-        required_error: "user_id is required",
-        invalid_type_error: "user_id must be string",
-    }).refine(nonBlank, { message: "user_id cannot be blank" }),
     secret: z.string({
         required_error: "secret required",
         invalid_type_error: "secret must be string",

@@ -56,6 +56,47 @@ const dpAdviser = z.object({
         required_error: "mobile_no required",
         invalid_type_error: "mobile_no must be string",
     }).refine(nonBlank, { message: "mobile_no cannot be blank" })
+    // legal_entity_type: z.enum(['person', 'non-person']) 
+})
+
+const dpAdviserUser = z.object({
+    adviser_id: z.string({
+        required_error: "adviser_id is required"
+    }).refine(nonBlank, { message: "adviser_id cannot be blank" }),
+    user_id: z.string({
+        required_error: "user_id is required",
+        invalid_type_error: "user_id must be string",
+    }).refine(nonBlank, { message: "user_id cannot be blank" }),
+    id_number: z.string({
+        required_error: "id_number is required",
+        invalid_type_error: "id_number must be string",
+    }).refine(nonBlank, { message: "id_number cannot be blank" }),
+    id_type: z.string({
+        required_error: "id_type is required",
+        invalid_type_error: "id_type must be string",
+    }).refine(nonBlank, { message: "id_type cannot be blank" }),
+    email: z.string().email(),
+    mobile_no: z.string({
+        required_error: "mobile_no is required",
+        invalid_type_error: "mobile_no must be string",
+    }).refine(nonBlank, { message: "mobile_no cannot be blank" }),
+    date_of_birth: z.string({
+        required_error: "date_of_birth is required",
+        invalid_type_error: "date_of_birth must be string",
+    }).refine(nonBlank, { message: "date_of_birth cannot be blank" }),
+    first_name: z.string({
+        required_error: "first_name is required",
+        invalid_type_error: "first_name must be string",
+    }).refine(nonBlank, { message: "first_name cannot be blank" }),
+    last_name: z.string({
+        required_error: "last_name is required",
+        invalid_type_error: "last_name must be string",
+    }).refine(nonBlank, { message: "last_name cannot be blank" }),
+    gender: z.string({
+        required_error: "gender is required",
+        invalid_type_error: "gender must be string",
+    }).refine(nonBlank, { message: "gender cannot be blank" }),
+    credential_type: z.enum(['root', 'admin','adviser-admin', 'adviser-user'])
 })
 
 const signIn =  z.object({
@@ -86,6 +127,8 @@ const adviserCreateCreds =  z.object({
 
 export const AdviserValidationSchemas = { 
     dpAdviser,
+    dpAdviserUser,
     adviserCreateCreds,
     signIn
  }
+

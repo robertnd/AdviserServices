@@ -16,9 +16,18 @@ export default {
     db_user: process.env.DB_USER,
     db_password: process.env.DB_PASSWORD,
     store_events: process.env.STORE_EVENTS,
-    sms_ep: process.env.SMS_EP,
+    otp_length: process.env.OTP_LENGTH,
+    sms_host: process.env.SMS_HOST,
+    sms_endpoint: process.env.SMS_ENDPOINT,
     sms_apikey: process.env.SMS_APIKEY,
     sms_partner_id: process.env.SMS_PARTNER_ID,
     sms_shortcode: process.env.SMS_SHORTCODE,
-    otp_length: process.env.OTP_LENGTH
+    om_iprs_host: process.env.OM_IPRS_HOST,
+    om_iprs_login_endpoint: process.env.OM_IPRS_LOGIN_ENDPOINT,
+    om_iprs_query_endpoint: process.env.OM_IPRS_QUERY_ENDPOINT,
+    om_iprs_key: process.env.OM_IPRS_KEY,
+    om_iprs_secret: process.env.OM_IPRS_SECRET,
+    om_partnermgmt_host: process.env.OM_PARTNERMGMT_HOST,
+    om_partnermgmt_endpoint: process.env.OM_PARTNERMGMT_ENDPOINT,
+    om_partnermgmt_apikey: process.env.OM_PARTNERMGMT_APIKEY
 }

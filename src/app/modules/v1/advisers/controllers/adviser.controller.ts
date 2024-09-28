@@ -9,7 +9,6 @@ import config from '../../../../config'
 import { ApiResponse } from '../../../../shared/dto/controllers/response/api.response'
 import { UtilServices } from '../../../../shared/services/util.services'
 import { getClaims } from '../../../../middleware/authMiddleware'
-import { UpdateDto } from '../../../../shared/dto/update.dto'
 
 // : Promise<void>
 const log: debug.IDebugger = debug('app:advisers-controller')
@@ -39,18 +38,18 @@ const registerAdviser = async (req: express.Request<{}, {}, RegistrationDto>, re
             return
         }
         if (validationResult.success && credsCheckResult.success) {
-
-            const validOtp = UtilServices.getOTP(otp)
-            if (!validOtp.success) {
-                res.status(400).send({
-                    status: 'error',
-                    message: `OTP ${otp} is not valid`
-                })
-                return
-            }
+            // TODO: toggle
+            // const validOtp = UtilServices.getOTP(otp)
+            // if (!validOtp.success) {
+            //     res.status(400).send({
+            //         status: 'error',
+            //         message: `OTP ${otp} is not valid`
+            //     })
+            //     return
+            // }
             // check exists
             let foundResults = await AdviserServices.checkIfAdviserExists(user_id)
-            if (foundResults.success && foundResults.data > 0) {
+            if (foundResults) {
                 const createResult = await AdviserServices.setPassword(user_id, password)
                 if (createResult.success) {
                     res.status(200).send({
@@ -71,7 +70,7 @@ const registerAdviser = async (req: express.Request<{}, {}, RegistrationDto>, re
                 if (createResult.success) {
                     res.status(200).send({
                         status: 'success',
-                        data: { action: 'Create Adviser' }
+                        data: createResult.data
                     })
                     return
                 } else {
@@ -83,7 +82,6 @@ const registerAdviser = async (req: express.Request<{}, {}, RegistrationDto>, re
                     return
                 }
             }
-
         }
     } catch (error) {
         res.status(500).send({
@@ -172,7 +170,6 @@ const getAdviser = async (req: express.Request, res: express.Response<ApiRespons
             })
             return
         }
-
     } catch (error) {
         res.status(500).send({
             status: 'error',
@@ -181,7 +178,6 @@ const getAdviser = async (req: express.Request, res: express.Response<ApiRespons
         })
         return
     }
-
 }
 
 
@@ -205,31 +201,22 @@ const signIn = async (req: express.Request, res: express.Response<ApiResponse<an
     if (validationResult.success) {
         const result = await AdviserServices.signIn(user_id, password)
         if (result.success) {
-            const usr = await AdviserServices.getAdviser(user_id)
-            if (usr.success) {
-                const token = result.data || ''
-                const userPayload = {
-                    message: 'Login successful',
-                    authenticated: true,
-                    profileName: usr.data.names,
-                    email: usr.data.primary_email,
-                    token: {
-                        accessToken: token,
-                        validity: `${config.jwt_validity}`
-                    }
+            const token = result.data.token || ''
+            const userPayload = {
+                message: 'Login successful',
+                authenticated: true,
+                profileName: result.data.names,
+                email: result.data.email,
+                token: {
+                    accessToken: token,
+                    validity: `${config.jwt_validity}`
                 }
-                res.header("x-access-token", token)
-                res.status(200).send({
-                    status: 'success',
-                    data: userPayload
-                })
-            } else {
-                res.status(500).send({
-                    status: 'error',
-                    message: 'Could not get adviser detials',
-                    errorData: usr.errorData
-                })
             }
+            res.header("x-access-token", token)
+            res.status(200).send({
+                status: 'success',
+                data: userPayload
+            })
             const storeEvent = {
                 user_id: user_id, event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'success', result: { status: 'success' }
             }

@@ -7,7 +7,7 @@ import { Result } from "../../../shared/dto/result"
 import { AdminDto } from "../dto/controllers/admin.dto"
 import { UtilServices } from "../../../shared/services/util.services"
 
-const rootSignIn = async (user_id: string, secret: string): Promise<Result<string, any>> => {
+const rootSignIn = async (secret: string): Promise<Result<string, any>> => {
 
     const JWT_SECRET = config.jwt_secret as string
     if (secret !== JWT_SECRET) {
@@ -19,10 +19,10 @@ const rootSignIn = async (user_id: string, secret: string): Promise<Result<strin
         const EXPIRES = config.jwt_validity
         const jwtOptions = {
             issuer: `${config.jwt_issuer}`,
-            subject: user_id,
+            subject: 'root',
             expiresIn: EXPIRES,
         }
-        const token = jwt.sign({ id: user_id, role: 'root' }, JWT_SECRET, jwtOptions)
+        const token = jwt.sign({ id: 'root', role: 'root' }, JWT_SECRET, jwtOptions)
         return {
             success: true,
             data: token
@@ -30,30 +30,24 @@ const rootSignIn = async (user_id: string, secret: string): Promise<Result<strin
     }
 }
 
-const checkIfAdminExists = async (user_id: string): Promise<Result<number, any>> => {
-    try {
-        const queryAdmin = `SELECT COUNT(*) FROM admins WHERE user_id=$1`
-        const result = await pool.query(queryAdmin, [user_id])
-        const { count } = result.rows[0]
-        return {
-            success: true,
-            data: parseInt(count)
-        }
-    } catch (err) {
-        return {
-            success: false,
-            errorData: err
-        }
-    }
+const checkIfAdminExists = async (user_id: string): Promise<boolean> => {
+    const queryResult = await getAdminCredentials(user_id)
+    return queryResult.success
 }
 
 const createAdmin = async (adminDto: AdminDto): Promise<Result<any, any>> => {
     try {
         const digest = await argon2.hash(adminDto.password)
-        const insertAdviser = `INSERT INTO admins (user_id, email, digest)
-                                 VALUES ( $1, $2, $3) RETURNING *`
-        const result: QueryResult<any> = await pool.query(insertAdviser, [adminDto.user_id, adminDto.email, digest])
-        return { success: true, data: {} }
+        const insertAdviser = `INSERT INTO admins (user_id, email, mobile_no, digest)
+                                 VALUES ( $1, $2, $3, $4) RETURNING *`
+        await pool.query(insertAdviser, [adminDto.user_id, adminDto.email, adminDto.mobile_no, digest])
+        return {
+            success: true, data: {
+                user_id: adminDto.user_id,
+                email: adminDto.email,
+                mobile_no: adminDto.mobile_no
+            }
+        }
     } catch (err) {
         return {
             success: false,
@@ -62,19 +56,31 @@ const createAdmin = async (adminDto: AdminDto): Promise<Result<any, any>> => {
     }
 }
 
-const adminSignIn = async (user_id: string, password: string): Promise<Result<string, any>> => {
-    const result = await UtilServices.getAdminDigest(user_id)
+const getAdminCredentials = async (user_id: string): Promise<Result<any, any>> => {
+    const queryResult = await UtilServices.genQuery('admins', 'user_id', user_id)
+    if (queryResult.success) return { success: true, data: queryResult.data.rows[0] }
+    return {
+        success: false,
+        errorData: queryResult.success == false
+            ? queryResult.errorData || `Unknown error occurred @getAdminCredentials with user_id = ${user_id}`
+            : `Unknown error occurred @getCredgetAdminCredentialsentials with user_id = ${user_id}`
+    }
+}
+
+const adminSignIn = async (user_id: string, password: string): Promise<Result<any, any>> => {
+    const result = await getAdminCredentials(user_id)
     if (result.success) {
-        let storedDigest = result.data || ''
+        let storedDigest = result.data.digest || ''
         let valid = await argon2.verify(storedDigest, password)
         if (valid) {
-            const JWT_SECRET =  config.jwt_secret as string
-            const EXPIRES =  config.jwt_validity
+            const JWT_SECRET = config.jwt_secret as string
+            const EXPIRES = config.jwt_validity
             const jwtOptions = {
                 issuer: `${config.jwt_issuer}`,
                 subject: user_id,
                 expiresIn: EXPIRES,
             }
+            // admin => OM admin, adviser-admin => Local Adviser Admin, adviser-user
             const token = jwt.sign({ id: user_id, role: 'admin' }, JWT_SECRET, jwtOptions)
             return {
                 success: true,
@@ -121,7 +127,7 @@ const getAdminsWithPaging = async (vPage: number, pageSize: number): Promise<Res
 }
 
 const updateAdminStatus = async (user_id: string, status: string): Promise<Result<any, any>> => {
-    if ( user_id && status ) {
+    if (user_id && status) {
         const client = await pool.connect()
         try {
             await client.query('BEGIN')
@@ -199,7 +205,7 @@ const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
 }
 
 const updateAdviserStatus = async (user_id: string, status: string): Promise<Result<any, any>> => {
-    if ( user_id && status ) {
+    if (user_id && status) {
         const client = await pool.connect()
         try {
             await client.query('BEGIN')
@@ -259,7 +265,7 @@ const getEvent = async (event_id: number): Promise<Result<any, any>> => {
                             FROM event e, event_payload ep  WHERE e.id = ep.event_id 
                             AND ep.event_id = $1
                             LIMIT 1`
-        const result: QueryResult<any> = await pool.query(queryEvent, [ event_id ])
+        const result: QueryResult<any> = await pool.query(queryEvent, [event_id])
         if (result.rows.length > 0) {
             return {
                 success: true,

@@ -1,27 +1,17 @@
-/* Tables */
-/*
-admins_id_seq
-adviser_id_seq
-adviser_agency_id_seq
-adviser_contacts_id_seq
-adviser_person_id_seq
-credentials_id_seq
-event_id_seq
-event_payload_id_seq
-*/
 
 CREATE TABLE admins
 (
     id SERIAL,
     user_id character varying(50) NOT NULL,
     email character varying(100) NOT NULL,
+    mobile_no character varying(20) NOT NULL,
     digest text NOT NULL,
     status character varying(50) NOT NULL DEFAULT 'Active',
     create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT admin_pkey PRIMARY KEY (user_id)
 );
 
-CREATE TABLE IF NOT EXISTS adviser
+CREATE TABLE adviser
 (
     id SERIAL,
     create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
@@ -30,23 +20,24 @@ CREATE TABLE IF NOT EXISTS adviser
     account_number character varying(50),
     partner_number character varying(50),
     intermediary_type character varying(100),
-    country character varying(50),
+    legal_entity_type character varying(20) NOT NULL,
+    country character varying(50) NOT NULL,
     active boolean NOT NULL DEFAULT false,
-    CONSTRAINT adviser_pkey PRIMARY KEY (account_number)
+    CONSTRAINT adviser_pkey PRIMARY KEY (kra_pin)
 );
 
-CREATE TABLE adviser_agency
+CREATE TABLE adviser_nonperson
 (
     id SERIAL,
     adviser_id bigint NOT NULL,
     user_id character varying(100) NOT NULL,
     create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     load_date character varying(100),
-    id_doc_number character varying(50) NOT NULL,
-    id_doc_type character varying(50) NOT NULL,
+    id_number character varying(50) NOT NULL,
+    id_type character varying(50) NOT NULL,
     date_of_incorporation character varying(50) NOT NULL,
-    agency_name character varying(50) NOT NULL,
-    CONSTRAINT adviser_agency_pkey PRIMARY KEY (id_doc_number, id_doc_type)
+    names character varying(50) NOT NULL,
+    CONSTRAINT adviser_agency_pkey PRIMARY KEY (id_number, id_type)
 );
 
 CREATE TABLE adviser_contacts
@@ -75,14 +66,49 @@ CREATE TABLE adviser_person
     user_id character varying(100) NOT NULL,
     create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     load_date character varying(100),
-    id_doc_number character varying(50) NOT NULL,
-    id_doc_type character varying(50) NOT NULL,
+    id_number character varying(50) NOT NULL,
+    id_type character varying(50) NOT NULL,
     date_of_birth character varying(50),
     first_name character varying(50),
     last_name character varying(50),
-    full_names character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    full_names character varying(150) NOT NULL,
     gender character varying(10),
-    CONSTRAINT adviser_person_pkey PRIMARY KEY (id_doc_number, id_doc_type)
+    CONSTRAINT adviser_person_pkey PRIMARY KEY (id_number, id_type)
+);
+
+CREATE TABLE adviser_user
+(
+    id SERIAL,
+    adviser_id bigint NOT NULL,
+    user_id character varying(50) NOT NULL,
+    create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    id_number character varying(50) NOT NULL,
+    id_type character varying(50) NOT NULL,
+    mobile_no character varying(20) NOT NULL,
+    email character varying(100) NOT NULL,
+    date_of_birth character varying(50),
+    first_name character varying(50) NOT NULL,
+    last_name character varying(50) NOT NULL,
+    gender character varying(10),
+    CONSTRAINT adviser_user_pkey PRIMARY KEY (id_number, id_type)
+);
+
+CREATE TABLE api_access
+(
+    id SERIAL,
+    credential_type character varying(20) NOT NULL,
+    api character varying(100) NOT NULL,
+    create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT api_access_pkey PRIMARY KEY (credential_type, api)
+);
+
+CREATE TABLE component_access
+(
+    id SERIAL,
+    credential_type character varying(20) NOT NULL,
+    component character varying(100) NOT NULL,
+    create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT component_access_pkey PRIMARY KEY (credential_type, component)
 );
 
 CREATE TABLE credentials
@@ -90,6 +116,7 @@ CREATE TABLE credentials
     id SERIAL,
     adviser_id bigint NOT NULL,
     user_id character varying(100) NOT NULL,
+    mobile_no character varying(20) NOT NULL,
     email character varying(100) NOT NULL,
     digest text NOT NULL,
     credential_type character varying(100) NOT NULL,
@@ -121,59 +148,65 @@ CREATE TABLE event_payload
     response jsonb
 );
 
-CREATE VIEW adviser_agency_user
+CREATE OR REPLACE VIEW adviser_nonperson_detailed
  AS
- SELECT c.id AS cred_id,
-    c.user_id, c.credential_type, c.status, a.id, a.create_date, a.kra_pin, a.account_number, a.partner_number, a.intermediary_type, ag.id AS agency_id, ag.id_doc_number, ag.id_doc_type, ag.date_of_incorporation, ag.agency_name, ac.id AS contacts_id, ac.mobile_no, ac.secondary_mobile_no, ac.primary_email, ac.secondary_email, ac.fixed_phone_no, ac.secondary_fixed_phone_no, ac.primary_address, ac.secondary_address, ac.city, ac.secondary_city
-   FROM credentials c,
-    adviser a,
-    adviser_agency ag,
+ SELECT 
+    a.id AS adviser_id, a.create_date, a.kra_pin, a.account_number, a.partner_number, a.intermediary_type, a.legal_entity_type, anp.id AS entity_id, anp.user_id, anp.id_number, anp.id_type, anp.date_of_incorporation, anp.names, ac.id AS contacts_id, ac.mobile_no, ac.secondary_mobile_no AS mobile_no2, ac.primary_email AS email, ac.secondary_email AS email2, ac.fixed_phone_no AS fixed_phone, ac.secondary_fixed_phone_no AS fixed_phone2, ac.primary_address AS address, ac.secondary_address AS address2, ac.city, ac.secondary_city AS city2
+   FROM adviser a,
+    adviser_nonperson anp,
     adviser_contacts ac
-  WHERE c.credential_type::text = 'Non-Individual'::text AND a.id = c.adviser_id AND a.id = ag.adviser_id AND a.id = ac.adviser_id;
+  WHERE a.legal_entity_type = 'non-person' AND a.id = anp.adviser_id AND a.id = ac.adviser_id;
 
-
-CREATE VIEW adviser_person_user
+CREATE OR REPLACE VIEW adviser_person_detailed
  AS
- SELECT c.id AS cred_id,
-    c.user_id, c.credential_type, c.status, a.id, a.create_date, a.kra_pin, a.account_number, a.partner_number, a.intermediary_type, ap.id AS person_id, ap.id_doc_number, ap.id_doc_type, ap.date_of_birth, ap.first_name, ap.last_name, ap.full_names, ap.gender, ac.id AS contacts_id, ac.mobile_no, ac.secondary_mobile_no, ac.primary_email, ac.secondary_email, ac.fixed_phone_no, ac.secondary_fixed_phone_no, ac.primary_address, ac.secondary_address, ac.city, ac.secondary_city
-   FROM credentials c,
-    adviser a,
+ SELECT 
+ a.id AS adviser_id, a.create_date, a.kra_pin, a.account_number, a.partner_number, a.intermediary_type, a.legal_entity_type, ap.id AS entity_id, ap.user_id, ap.id_number, ap.id_type, ap.date_of_birth, ap.first_name, ap.last_name, ap.full_names, ap.gender, ac.id AS contacts_id, ac.mobile_no, ac.secondary_mobile_no AS mobile_no2, ac.primary_email AS email, ac.secondary_email AS email2, ac.fixed_phone_no AS fixed_phone, ac.secondary_fixed_phone_no AS fixed_phone2, ac.primary_address AS address, ac.secondary_address AS address2, ac.city, ac.secondary_city AS city2
+   FROM adviser a,
     adviser_person ap,
     adviser_contacts ac
-  WHERE c.credential_type::text = 'Individual'::text AND a.id = c.adviser_id AND a.id = ap.adviser_id AND a.id = ac.adviser_id;
+  WHERE a.legal_entity_type = 'person' AND a.id = ap.adviser_id AND a.id = ac.adviser_id;
 
-
-CREATE VIEW all_advisers
+CREATE OR REPLACE VIEW all_advisers
  AS
- SELECT adviser_agency_user.cred_id,
-    adviser_agency_user.user_id, adviser_agency_user.credential_type, adviser_agency_user.status, adviser_agency_user.id AS adviser_id, adviser_agency_user.create_date, adviser_agency_user.kra_pin, adviser_agency_user.account_number, adviser_agency_user.partner_number, adviser_agency_user.intermediary_type, adviser_agency_user.id AS person_or_agency_id, adviser_agency_user.id_doc_number, adviser_agency_user.id_doc_type, adviser_agency_user.date_of_incorporation AS date_of_birth_or_inc, adviser_agency_user.agency_name AS names, adviser_agency_user.id AS contacts_id, adviser_agency_user.mobile_no, adviser_agency_user.secondary_mobile_no, adviser_agency_user.primary_email, adviser_agency_user.secondary_email, adviser_agency_user.fixed_phone_no, adviser_agency_user.secondary_fixed_phone_no, adviser_agency_user.primary_address, adviser_agency_user.secondary_address, adviser_agency_user.city, adviser_agency_user.secondary_city
-   FROM adviser_agency_user
+ SELECT 
+    an.adviser_id, an.create_date, an.kra_pin, an.account_number, an.partner_number, an.intermediary_type, an.legal_entity_type, an.entity_id, an.user_id, an.id_number, an.id_type, an.date_of_incorporation AS date_of_birth_or_inc, an.names, an.contacts_id, an.mobile_no, an.mobile_no2, an.email, an.email2, an.fixed_phone, an.fixed_phone2, an.address, an.address2, an.city, an.city2
+  FROM adviser_nonperson_detailed an
 UNION ALL
- SELECT adviser_person_user.cred_id,
-    adviser_person_user.user_id, adviser_person_user.credential_type, adviser_person_user.status, adviser_person_user.id AS adviser_id, adviser_person_user.create_date, adviser_person_user.kra_pin, adviser_person_user.account_number, adviser_person_user.partner_number, adviser_person_user.intermediary_type, adviser_person_user.id AS person_or_agency_id, adviser_person_user.id_doc_number, adviser_person_user.id_doc_type, adviser_person_user.date_of_birth AS date_of_birth_or_inc, adviser_person_user.full_names AS names, adviser_person_user.id AS contacts_id, adviser_person_user.mobile_no, adviser_person_user.secondary_mobile_no, adviser_person_user.primary_email, adviser_person_user.secondary_email, adviser_person_user.fixed_phone_no, adviser_person_user.secondary_fixed_phone_no, adviser_person_user.primary_address, adviser_person_user.secondary_address, adviser_person_user.city, adviser_person_user.secondary_city
-   FROM adviser_person_user;
+ SELECT 
+ ap.adviser_id, ap.create_date, ap.kra_pin, ap.account_number, ap.partner_number, ap.intermediary_type, ap.legal_entity_type, ap.entity_id, ap.user_id, ap.id_number, ap.id_type, ap.date_of_birth AS date_of_birth_or_inc, ap.full_names AS names, ap.contacts_id, ap.mobile_no, ap.mobile_no2, ap.email, ap.email2, ap.fixed_phone, ap.fixed_phone2, ap.address, ap.address2, ap.city, ap.city2
+  FROM adviser_person_detailed ap;
+
+
+
 
 /* Grants on Tables */
+GRANT ALL ON admins to omserviceuser;
 GRANT ALL ON adviser to omserviceuser;
-GRANT ALL ON adviser_agency to omserviceuser;
+GRANT ALL ON adviser_nonperson to omserviceuser;
 GRANT ALL ON adviser_contacts to omserviceuser;
 GRANT ALL ON adviser_person to omserviceuser;
+GRANT ALL ON adviser_user to omserviceuser;
+GRANT ALL ON api_access to omserviceuser;
+GRANT ALL ON component_access to omserviceuser;
 GRANT ALL ON credentials to omserviceuser;
 GRANT ALL ON event to omserviceuser;
 GRANT ALL ON event_payload to omserviceuser;
-GRANT ALL ON admins to omserviceuser;
 
 /* Grants on VIEWS */
-GRANT ALL ON adviser_person_user to omserviceuser;
-GRANT ALL ON adviser_agency_user to omserviceuser;
+GRANT ALL ON adviser_nonperson_detailed to omserviceuser;
+GRANT ALL ON adviser_person_detailed to omserviceuser;
 GRANT ALL ON all_advisers to omserviceuser;
 
 /* Grants on SEQUENCES */
+GRANT ALL ON admins_id_seq to omserviceuser;
 GRANT ALL ON adviser_id_seq to omserviceuser;
-GRANT ALL ON adviser_agency_id_seq to omserviceuser;
+GRANT ALL ON adviser_nonperson_id_seq to omserviceuser;
 GRANT ALL ON adviser_contacts_id_seq to omserviceuser;
 GRANT ALL ON adviser_person_id_seq to omserviceuser;
+GRANT ALL ON adviser_user_id_seq to omserviceuser;
+GRANT ALL ON api_access_id_seq to omserviceuser;
+GRANT ALL ON component_access_id_seq to omserviceuser;
 GRANT ALL ON credentials_id_seq to omserviceuser;
 GRANT ALL ON event_id_seq to omserviceuser;
 GRANT ALL ON event_payload_id_seq to omserviceuser;
-GRANT ALL ON admins_id_seq to omserviceuser;
+
