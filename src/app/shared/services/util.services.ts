@@ -220,6 +220,20 @@ function getOTP(otp: string) {
     return { success: false, errorData: 'Not found' }
 }
 
+function singleSpaced(input: string) {
+    if (input) return input.trim().replace(/\s+/g, ' ')
+    else return ''
+}
+
+function extractMiddleNames(names: string) {
+    var newNames = singleSpaced(names)
+    const tokens = newNames.split(' ')
+    if (tokens.length < 3) {
+        return ''
+    }
+    return tokens.slice(1, -1).join(' ')
+}
+
 export const UtilServices = {
     storeEvent,
     sendSMS,
@@ -232,5 +246,7 @@ export const UtilServices = {
     setToken,
     unsetToken,
     iprsQuery,
-    partnerNoQuery
+    partnerNoQuery,
+    singleSpaced,
+    extractMiddleNames
 }

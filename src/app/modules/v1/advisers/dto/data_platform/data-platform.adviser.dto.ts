@@ -1,4 +1,4 @@
-export type DataPlatformAdviser = {
+export type DataPlatformAdviserDto = {
     PartitionKey: string
     RowKey: string
     Timestamp: string

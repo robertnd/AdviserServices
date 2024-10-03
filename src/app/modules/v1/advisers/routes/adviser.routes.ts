@@ -3,7 +3,6 @@ import { AdviserController } from "../controllers/adviser.controller"
 import { verifyToken } from "../../../../middleware/authMiddleware"
 import { isAdmin } from "../../../../middleware/adminMiddleware"
 
-
 const router = express.Router()
 
 /**
@@ -40,7 +39,7 @@ const router = express.Router()
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/register-adviser", AdviserController.registerAdviser)
+router.post("/register-adviser", AdviserController.migrateAdviser)
 
 /**
  * @swagger
@@ -145,5 +144,9 @@ router.get("/get-adviser/:user_id", verifyToken, AdviserController.getAdviser)
  *               $ref: '#/components/schemas/Error'
  */
 router.post("/sign-in", AdviserController.signIn)
+
+router.post("/adviser-application", AdviserController.newAdviserApplication)
+router.post("/adviser-application-file", AdviserController.saveFile)
+router.post("/adviser-user", AdviserController.newStaffUser)
 
 export const AdviserRoutes = router

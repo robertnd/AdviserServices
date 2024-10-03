@@ -2,138 +2,179 @@ import { QueryResult } from "pg"
 import pool from "../../../../config/database"
 import { AdviserQuery } from "../interfaces/adviser-query-dto.interface"
 import { fadvisers } from "../../../../_components/fadvisers.dpmock"
-import { DataPlatformAdviser } from "../dto/data_platform/data-platform.adviser.dto"
-import { RegistrationDto } from "../dto/controllers/request/register.existing.dto"
+import { RegistrationDto } from "../dto/controllers/request/register.dto"
 import argon2 from "argon2"
 import jwt from "jsonwebtoken"
 import config from "../../../../config"
 import { Result } from "../../../../shared/dto/result"
 import { UtilServices } from "../../../../shared/services/util.services"
-import { UserDto } from "../dto/user.dto"
+import { AdviserStatus, CredentialStatus, CredentialType, IntermediaryType, LegalEntityType, RBAC } from "../../../../shared/constants"
+import { DataPlatformAdviserDto } from "../dto/data_platform/data-platform.adviser.dto"
 
-const createAdviser = async (regDto: RegistrationDto): Promise<Result<any, any>> => {
+const createAdviser = async (
+    regDto: RegistrationDto,
+    adviser_status: AdviserStatus,
+    legal_entity_type: LegalEntityType,
+    intermediary_type: IntermediaryType,
+    credential_type: CredentialType,
+    rbac: RBAC): Promise<Result<any, any>> => {
     var digest = ''
     // These 4 inserts need to happen in concert
-    if (regDto.dpAdviser) {
-        const client = await pool.connect()
-        // TODO: this information will need to come from an external source
-        var legal_entity_type = 'person'
-        try {
-            await client.query('BEGIN')
-            const { kra_pin, account_no, partner_number, intermediary_type, load_date, primary_email, mobile_no, country } = regDto.dpAdviser
-            const insertAdviser = `INSERT INTO adviser (kra_pin, account_number, partner_number, intermediary_type, legal_entity_type, load_date, country)
-                                 VALUES ( $1, $2, $3, $4, $5, $6, $7) RETURNING *`
-            const result1: QueryResult<any> = await client.query(
-                insertAdviser,
-                [kra_pin, account_no, partner_number, intermediary_type, legal_entity_type, load_date, country]
-            )
-            // get row id of inserted record
-            const { id } = result1.rows[0]
-            const { user_id } = regDto
-            digest = await argon2.hash(regDto.password)
-            const insertCreds = `INSERT INTO credentials ( user_id, email, mobile_no, adviser_id, digest, credential_type, status ) 
-            VALUES ( $1, $2, $3, $4, $5, $6, $7 ) RETURNING *`
-            var cred_type = 'adviser-admin'
-            const result2: QueryResult<any> = await client.query(insertCreds, [user_id, primary_email, mobile_no, id, digest, cred_type, 'New'])
-
-            const { secondary_mobile, secondary_email, primary_phone, secondary_phone, primary_address, secondary_address, city, secondary_city } = regDto.dpAdviser
-            const insertContacts = `INSERT INTO adviser_contacts ( adviser_id, mobile_no, secondary_mobile_no, primary_email, secondary_email, fixed_phone_no, secondary_fixed_phone_no, primary_address, secondary_address, city, secondary_city, country ) 
-            VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`
-            const result3  = await client.query(
-                insertContacts,
-                [id, mobile_no, secondary_mobile, primary_email, secondary_email, primary_phone, secondary_phone, primary_address, secondary_address, city, secondary_city, country]
-            )
-
-            var result4
-            const { id_number, id_type, first_name, last_name, full_names, gender } = regDto.dpAdviser
-            if ( legal_entity_type == 'person' ) {
-                const { date_of_birth } = regDto.dpAdviser
-                const insertPerson = `INSERT INTO adviser_person ( adviser_id, user_id, id_number, id_type, date_of_birth, first_name, last_name, full_names, gender ) 
-                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 ) RETURNING *`
-                result4 = await client.query(
-                    insertPerson,
-                    [id, user_id, id_number, id_type, date_of_birth, first_name, last_name, full_names, gender]
-                )
-            } else {
-                // TODO: Internal testing only. No biz requirements yet
-                const dateOfInc = new Date(Date.now()).toISOString()
-                const names = 'Big Bucks Agency'
-                const insertNonPerson = `INSERT INTO adviser_nonperson ( adviser_id, user_id, id_number, id_type, date_of_incorporation, names ) 
-                VALUES ( $1, $2, $3, $4, $5, $6) RETURNING *`
-                result4 = await client.query(
-                    insertNonPerson,
-                    [id, user_id, id_number, id_type, dateOfInc, names]
-                )
-            }
-
-            await client.query('COMMIT')
-            const created = {
-                adviser: result1.rows[0] 
-                            ? { kra_pin, account_no, partner_number, intermediary_type, legal_entity_type, country }
-                            : {},
-                credentials: result2.rows[0] 
-                            ? { user_id, email: primary_email, mobile_no, id, credential_type: cred_type }
-                            : {},
-                contacts: result3.rows[0]
-                            ? result3.rows[0]
-                            : {},
-                entity: result4.rows[0] 
-                            ? result4.rows[0]
-                            : {}
-            }
-            return { success: true, data: created }
-        } catch (err) {
-            // TODO: add logging
-            await client.query('ROLLBACK')
-            // console.log(err)
-            console.log(JSON.stringify(err))
-            return {
-                success: false,
-                errorData: err
-            }
-        } finally {
-            client.release()
-        }
-    } else {
-        return {
-            success: false,
-            errorData: 'Registration data is invalid'
-        }
-    }
-}
-
-const createAdviserUser = async (userDto: UserDto): Promise<Result<any, any>> => {
-    var digest = ''
 
     const client = await pool.connect()
+    // TODO: this information will need to come from an external source
+    // var legal_entity_type = 'person'
     try {
         await client.query('BEGIN')
+        const { user_id } = regDto
+        var adviser_id = -1 // canary value
+        var result1, result3
+        const body = regDto.adviser
 
-        const insertUser = `INSERT INTO adviser_user ( adviser_id, user_id, id_doc_number, id_doc_type, mobile_no, email, date_of_birth, first_name, last_name, gender ) 
-            VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 ) RETURNING *`
-        const result1: QueryResult<any> = await client.query(
-            insertUser,
-            [userDto.adviser_id, userDto.user_id, userDto.id_doc_number, userDto.id_doc_type, userDto.mobile_no, userDto.email, userDto.date_of_birth, userDto.first_name, userDto.last_name, userDto.gender]
-        )
-        const created = result1.rows[0]
-        digest = await argon2.hash(userDto.password)
-        const insertCreds = `INSERT INTO credentials ( user_id, email, mobile_no, adviser_id, digest, credential_type, status ) 
-            VALUES ( $1, $2, $3, $4, $5, $6 ) RETURNING *`
-        const result2: QueryResult<any> = await client.query(insertCreds, [userDto.user_id, userDto.email, userDto.mobile_no, userDto.adviser_id, digest, userDto.credential_type, 'Active'])
+        // Skip Adviser creation for staff user
+        if (regDto.reg_type == 'staff') {
+
+            if ( regDto.adviser_user_id.toLowerCase() == regDto.user_id.toLowerCase()) {
+                return { 
+                    success: false,
+                    errorData: `user_id ( ${regDto.adviser_user_id} ) and adviser_user_id ( ${regDto.adviser_user_id} ) have the same value`
+                }
+            }
+            const searchRes = await AdviserServices.getCredentials(regDto.adviser_user_id)
+            if (searchRes.success) {
+                const credential = searchRes.data
+                if ( credential.credential_type !== 'adviser_admin') {
+                    return { 
+                        success: false,
+                        errorData: `${regDto.adviser_user_id}: Not an adviser admin`
+                    }
+                }
+                adviser_id = credential.adviser_id
+            } else {
+                // user staff creation failed ...
+                return searchRes
+            }
+        } else {
+            var kraPIN, accountNo, partnerNumber, loadDate, country
+            if (typeof body == 'object') {
+                if ('kra_pin' in body) kraPIN = body.kra_pin || ''
+                if ('account_no' in body) accountNo = body.account_no || ''
+                if ('partner_number' in body) partnerNumber = body.partner_number || ''
+                if ('load_date' in body) loadDate = body.load_date || ''
+                if ('country' in body) country = body.country || 'Kenya'
+            }
+            const insertAdviser = `INSERT INTO adviser ( kra_pin, account_no, partner_number, intermediary_type, legal_entity_type, country, status )
+                                 VALUES ( $1, $2, $3, $4, $5, $6, $7) RETURNING *`
+            result1 = await client.query(
+                insertAdviser,
+                [ kraPIN, accountNo, partnerNumber, intermediary_type, legal_entity_type, country, adviser_status ]
+            )
+            // get row id of inserted record
+            adviser_id = result1.rows[0].id
+        }
+
+        const longRandomPassword = `${UtilServices.generateOTP()}${UtilServices.generateOTP()}`
+        digest = await argon2.hash(longRandomPassword)
+        const { primary_email, mobile_no } = body
+        const insertCreds = `INSERT INTO credentials ( user_id, email, mobile_no, adviser_id, digest, credential_type, status, rbac ) 
+            VALUES ( $1, $2, $3, $4, $5, $6, $7, $8 ) RETURNING *`
+        //var cred_type = 'adviser-admin'
+        const result2 = await client.query(
+            insertCreds,
+            [ user_id, primary_email, mobile_no, adviser_id, digest, credential_type, CredentialStatus.Not_Set, rbac ])
+
+        if (regDto.reg_type == 'staff') {
+            // Skip creating contacts for staff user
+        }
+        else {
+            var secondaryMobile, secondaryEmail, primaryPhone, secondaryPhone, primaryAddress, secondaryAddress, city, secondaryCity
+            if (typeof body == 'object') {
+                if ('secondary_mobile' in body) secondaryMobile = body.secondary_mobile || ''
+                if ('secondary_email' in body) secondaryEmail = body.secondary_email || ''
+                if ('primary_phone' in body) primaryPhone = body.primary_phone || ''
+                if ('secondary_phone' in body) secondaryPhone = body.secondary_phone || ''
+                if ('primary_address' in body) primaryAddress = body.primary_address || ''
+                if ('secondary_address' in body) secondaryAddress = body.secondary_address || ''
+                if ('city' in body) city = body.city || ''
+                if ('secondary_city' in body) secondaryCity = body.secondary_city || ''
+            }
+            const insertContacts = `INSERT INTO adviser_contacts ( adviser_id, mobile_no, secondary_mobile_no, primary_email, secondary_email, fixed_phone_no, secondary_fixed_phone_no, primary_address, secondary_address, city, secondary_city, country ) 
+                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`
+            result3 = await client.query(
+                insertContacts,
+                [ adviser_id, mobile_no, secondaryMobile, primary_email, secondaryEmail, primaryPhone, secondaryPhone, primaryAddress, secondaryAddress, city, secondaryCity, country ]
+            )
+        }
+
+        var result4
+        const { id_number, id_type, first_name, last_name, full_names, gender } = body
+        if (legal_entity_type == LegalEntityType.person) {
+            const { date_of_birth } = body
+            const insertPerson = `INSERT INTO adviser_person ( adviser_id, user_id, id_number, id_type, date_of_birth, first_name, last_name, full_names, gender ) 
+                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 ) RETURNING *`
+            result4 = await client.query(
+                insertPerson,
+                [ adviser_id, user_id, id_number, id_type, date_of_birth, first_name, last_name, full_names, gender ]
+            )
+        } else {
+            // TODO: Internal testing only. No biz requirements yet
+            const dateOfInc = new Date(Date.now()).toISOString()
+            const names = 'Big Bucks Agency'
+            const insertNonPerson = `INSERT INTO adviser_nonperson ( adviser_id, user_id, id_number, id_type, date_of_incorporation, names ) 
+                VALUES ( $1, $2, $3, $4, $5, $6) RETURNING *`
+            result4 = await client.query(
+                insertNonPerson,
+                [ adviser_id, user_id, id_number, id_type, dateOfInc, names ]
+            )
+        }
+
         await client.query('COMMIT')
-
-        return { success: true, data: {} }
+        const created = {
+            adviser: result1 && result1.rows[0]
+                ? result1.rows[0]
+                : {},
+            credentials: result2.rows[0]
+                ? { user_id, email: primary_email, mobile_no, adviser_id, credential_type }
+                : {},
+            contacts: result3 && result3.rows[0]
+                ? result3.rows[0]
+                : {},
+            entity: result4.rows[0]
+                ? result4.rows[0]
+                : {}
+        }
+        return { success: true, data: created }
     } catch (err) {
         // TODO: add logging
         await client.query('ROLLBACK')
         // console.log(err)
         console.log(JSON.stringify(err))
+        return { success: false, errorData: err }
+    } finally {
+        client.release()
+    }
+}
+
+const createAdviserApplicationFile = async (user_id: string, file_desc: string, file_data: string): Promise<Result<any, any>> => {
+    try {
+
+        const query = `INSERT INTO applicant_filedata ( user_id, file_desc, file_data ) VALUES ( $1, $2, $3) RETURNING *`
+        const result = await pool.query(
+            query,
+            [user_id, file_desc, file_data]
+        )
+        const created = result.rows[0]
+        return {
+            success: true, data: {
+                user_id, row_id: created.id, file_desc
+            }
+        }
+    } catch (err) {
+        console.log(JSON.stringify(err))
         return {
             success: false,
             errorData: err
         }
-    } finally {
-        client.release()
     }
 }
 
@@ -156,7 +197,7 @@ const setPassword = async (user_id: string, password: string): Promise<Result<an
     }
 }
 
-const queryPlatformAdviser = async (query: AdviserQuery): Promise<DataPlatformAdviser> => {
+const queryPlatformAdviser = async (query: AdviserQuery): Promise<DataPlatformAdviserDto> => {
     console.log('Query Obj: ', JSON.stringify(query))
     const { key } = query
 
@@ -179,7 +220,7 @@ const queryPlatformAdviser = async (query: AdviserQuery): Promise<DataPlatformAd
     return modded
 }
 
-const signIn = async (user_id: string, password: string, payload?: any): Promise<Result<any, any>> => {
+const signIn = async (user_id: string, password: string): Promise<Result<any, any>> => {
     const profile = await AdviserServices.getProfile(user_id)
     if (profile.success) {
         let storedDigest = profile.data.credentials.digest || ''
@@ -269,14 +310,15 @@ const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
     }
 }
 
-const getAdviserUser = async (user_id: string): Promise<Result<any, any>> => {
-    const queryResult = await UtilServices.genQuery('adviser_user', 'user_id', user_id)
-    if (queryResult.success) return { success: true, data: queryResult.data.rows[0] }
-    return {
-        success: false,
-        errorData: queryResult.success == false
-            ? queryResult.errorData || `Unknown error occurred @getAdviserUser with user_id = ${user_id}`
-            : `Unknown error occurred @getAdviserUser with user_id = ${user_id}`
+const getApplication = async (id_type: string, id_number: string): Promise<Result<any, any>> => {
+    try {
+        const query = `SELECT * FROM all_advisers WHERE id_type=$1 AND id_number=$2 AND intermediary_type=$3`
+        const result = await pool.query(
+            query, [id_type, id_number, IntermediaryType.Applicant])
+        if (result.rows.length > 0) return { success: true, data: result }
+        else return { success: false, errorData: `Application with ${id_type} = ${id_number} not found` }
+    } catch (err) {
+        return { success: false, errorData: err }
     }
 }
 
@@ -285,34 +327,31 @@ const checkIfAdviserExists = async (user_id: string): Promise<boolean> => {
     return adviser.success
 }
 
+const checkIfApplicationExists = async (id_type: string, id_number: string): Promise<boolean> => {
+    const application = await getApplication(id_type, id_number)
+    return application.success
+}
+
+const checkIfApplicationExistsById = async (applicant_id: number): Promise<boolean> => {
+    const queryResult = await UtilServices.genQuery('applicant', 'id', applicant_id)
+    return queryResult.success
+}
+
 const getProfile = async (user_id: string): Promise<Result<any, any>> => {
     const credentials = await getCredentials(user_id)
     const adviser = await getAdviser(user_id)
-    const adviser_user = await getAdviserUser(user_id)
     if (credentials.success && adviser.success) {
-        if (adviser_user.success) {
-            return {
-                success: true,
-                data: {
-                    credentials: credentials.data,
-                    adviser: adviser.data,
-                    adviser_user: adviser_user.data
-                }
-            }
-        } else {
-            return {
-                success: true,
-                data: {
-                    credentials: credentials.data,
-                    adviser: adviser.data
-                }
+        return {
+            success: true,
+            data: {
+                credentials: credentials.data,
+                adviser: adviser.data
             }
         }
     } else {
         var errors: any = []
         if (credentials.success == false && credentials.errorData) errors.push[credentials.errorData]
         if (adviser.success == false && adviser.errorData) errors.push[adviser.errorData]
-        if (adviser_user.success == false && adviser_user.errorData) errors.push[adviser_user.errorData]
         return {
             success: false,
             errorData: errors
@@ -328,5 +367,9 @@ export const AdviserServices = {
     setPassword,
     getProfile,
     getCredentials,
-    getAdviser
+    getAdviser,
+    getApplication,
+    checkIfApplicationExists,
+    createAdviserApplicationFile,
+    checkIfApplicationExistsById
 }

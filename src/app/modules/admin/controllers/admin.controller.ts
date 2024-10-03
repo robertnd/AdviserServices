@@ -11,6 +11,7 @@ import { UpdateDto } from '../../../shared/dto/update.dto'
 import { AdviserServices } from '../../v1/advisers/services/adviser.services'
 import { IPRSRequest } from '../../../shared/dto/external/iprs/request/iprs.req'
 import { PartnerNumberRequest } from '../../../shared/dto/external/partner_mgmt/request/partner.no.req'
+import { failedIprsData, okIprsQuery } from '../../../shared/dto/mocks/mock.data'
 
 // : Promise<void>
 const log: debug.IDebugger = debug('app:advisers-controller')
@@ -428,7 +429,19 @@ const testIPRS = async (req: express.Request, res: express.Response) => {
     res.status(200).send(fres)
 }
 
+// TODO: this is a Simulation
 const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
+    const data = okIprsQuery()
+    const errorData = failedIprsData()
+    res.status(200).send({ status: 'success', data })
+    // res.status(500).send({
+    //     status: 'error',
+    //     message: '@Controller (Mock) - @queryIPRS/else - An error occurred',
+    //     errorData
+    // })
+}
+
+const queryIPRS_real = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
     const { identification, id_type } = req.body
     var err
     try {
@@ -444,7 +457,7 @@ const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express
             res.status(500).send({
                 status: 'error',
                 message: '@Controller - @queryIPRS/else - An error occurred',
-                errorData: result
+                errorData: result.errorData
             })
         }
     } catch (error) {
@@ -458,6 +471,17 @@ const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express
 }
 
 const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
+    res.status(200).send({
+        status: 'success',
+        data: {
+            Code: 200,
+            Status: 'success',
+            partnerNumber: '1001171133'
+        }
+    })
+}
+
+const partnerNoQuery_KE_Person_REAL = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
     var txRequest = {
         country_id: 1,
         sourceid: 117640,
