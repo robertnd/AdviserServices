@@ -55,6 +55,76 @@ const swaggerOptions: Options = {
                         secondary_phone: { type: 'string' }
                     }
                 },
+                Applicant: {
+                    type: 'object',
+                    required: [
+                        'first_name', 'last_name', 'full_names', 'gender', 'date_of_birth', 'id_type', 'id_number', 'kra_pin', 'mobile_no', 'primary_email', 'primary_address', 'city', 'country'
+                    ],
+                    properties: {
+                        first_name: { type: 'string' },
+                        last_name: { type: 'string' },
+                        full_names: { type: 'string' },
+                        gender: { type: 'string' },
+                        date_of_birth: { type: 'string' },
+                        id_type: { type: 'string' },
+                        id_number: { type: 'string' },
+                        kra_pin: { type: 'string' },
+                        mobile_no: { type: 'string' },
+                        primary_email: { type: 'string' },
+                        primary_address: { type: 'string' },
+                        city: { type: 'string' },
+                        country: { type: 'string' }
+                    }
+                },
+                Staff: {
+                    type: 'object',
+                    required: [
+                        'first_name', 'last_name', 'full_names', 'gender', 'id_number', 'id_type', 'date_of_birth', 'mobile_no', 'primary_email', 'partner_number'
+                    ],
+                    properties: {
+                        first_name: { type: 'string' },
+                        last_name: { type: 'string' },
+                        full_names: { type: 'string' },
+                        gender: { type: 'string' },
+                        id_number: { type: 'string' },
+                        id_type: { type: 'string' },
+                        date_of_birth: { type: 'string' },
+                        mobile_no: { type: 'string' },
+                        primary_email: { type: 'string' },
+                        partner_number: { type: 'string' }
+                    }
+                },
+                CreateOTP: {
+                    type: 'object',
+                    required: [
+                        'user_id', 'mobile_no'
+                    ],
+                    properties: {
+                        user_id: { type: 'string' },
+                        mobile_no: { type: 'string' },
+                    }
+                },
+                SetPassword: {
+                    type: 'object',
+                    required: [
+                        'user_id', 'password', 'otp_digest'
+                    ],
+                    properties: {
+                        user_id: { type: 'string' },
+                        password: { type: 'string' },
+                        otp_digest: { type: 'string' }
+                    }
+                },
+                SearchAdviser: {
+                    type: 'object',
+                    required: [
+                        'column', 'param'
+                    ],
+                    properties: {
+                        column: { type: 'string' },
+                        param: { type: 'string' }
+                    }
+                },
                 Admin: {
                     type: 'object',
                     required: [

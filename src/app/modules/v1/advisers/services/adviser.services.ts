@@ -73,8 +73,11 @@ const createAdviser = async (
             adviser_id = result1.rows[0].id
         }
 
-        const longRandomPassword = `${UtilServices.generateOTP()}${UtilServices.generateOTP()}`
-        digest = await argon2.hash(longRandomPassword)
+        const digestSource = regDto.password 
+        ? regDto.password 
+        : `${UtilServices.generateOTP()}${UtilServices.generateOTP()}`
+        digest = await argon2.hash( digestSource )
+
         const { primary_email, mobile_no } = body
         const insertCreds = `INSERT INTO credentials ( user_id, email, mobile_no, adviser_id, digest, credential_type, status, rbac ) 
             VALUES ( $1, $2, $3, $4, $5, $6, $7, $8 ) RETURNING *`
@@ -310,6 +313,17 @@ const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
     }
 }
 
+const search = async (table: string, column: string, param: string): Promise<Result<any, any>> => {
+    const queryResult = await UtilServices.genQuery(table, column, param)
+    if (queryResult.success) return { success: true, data: queryResult.data.rows[0] }
+    return {
+        success: false,
+        errorData: queryResult.success == false
+            ? queryResult.errorData || `Unknown error occurred @searchAdviser with ${column} = ${param}`
+            : `Unknown error occurred @getAdviser with ${column} = ${param}`
+    }
+}
+
 const getApplication = async (id_type: string, id_number: string): Promise<Result<any, any>> => {
     try {
         const query = `SELECT * FROM all_advisers WHERE id_type=$1 AND id_number=$2 AND intermediary_type=$3`
@@ -371,5 +385,6 @@ export const AdviserServices = {
     getApplication,
     checkIfApplicationExists,
     createAdviserApplicationFile,
-    checkIfApplicationExistsById
+    checkIfApplicationExistsById,
+    search
 }

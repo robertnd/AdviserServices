@@ -435,8 +435,9 @@ router.get("/get-events/:page/:limit", verifyToken, isAdmin, AdminController.get
  */
 router.get("/get-event/:event_id", verifyToken, isAdmin, AdminController.getEvent)
 
-router.get("/get-iprs-token", AdminController.testIPRS)
-router.post("/query-iprs", AdminController.queryIPRS)
+// router.get("/get-iprs-token", AdminController.testIPRS)
+// router.post("/query-iprs", AdminController.queryIPRS)
+
 router.post("/query-partner-number", AdminController.partnerNoQuery_KE_Person)
 
 export const AdminRoutes = router

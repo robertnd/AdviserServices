@@ -5,6 +5,7 @@ import { StaffDto } from "../../staff.dto"
 export type RegistrationDto = {
     user_id: string
     other_names: string
+    password: string
 } & ( MigratedAdviser | Applicant | Staff )
 
 type MigratedAdviser = {

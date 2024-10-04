@@ -7,7 +7,7 @@ import { AdviserQuery } from '../interfaces/adviser-query-dto.interface'
 import { RegistrationDto } from '../dto/controllers/request/register.dto'
 import config from '../../../../config'
 import { ApiResponse } from '../../../../shared/dto/controllers/response/api.response'
-import { UtilServices } from '../../../../shared/services/util.services'
+import { hasher, UtilServices } from '../../../../shared/services/util.services'
 import { getClaims } from '../../../../middleware/authMiddleware'
 import { FileDataDto } from '../dto/applicant.file.dto'
 import { AdviserStatus, LegalEntityType, IntermediaryType, CredentialType, RBAC } from '../../../../shared/constants'
@@ -28,17 +28,22 @@ const migrateAdviser = async (req: express.Request, res: express.Response<ApiRes
         if (validationResult.success) {
             // create reg DTO
             const adviser = req.body
+            var password = ''
+            if (typeof adviser === 'object' && 'password' in adviser) {
+                password = adviser.password
+            }
             const regDto = {
                 reg_type: 'migrated',
                 user_id: req.body.primary_email,
                 other_names: UtilServices.extractMiddleNames(req.body.full_names),
+                password,
                 adviser
             } as RegistrationDto
 
             let foundResults = await AdviserServices.checkIfAdviserExists(regDto.user_id)
             if (foundResults) {
                 let message = `Adviser with details ${adviser.first_name} ${adviser.last_name} - KRA PIN ${adviser.kra_pin} already exists`
-                res.status(400).send({ status: 'error', message, errorData: {} })
+                res.status(400).send({ status: 'error', message, errorData: message })
                 return
             } else {
                 const createResult = await AdviserServices.createAdviser(
@@ -76,17 +81,22 @@ const newAdviserApplication = async (req: express.Request, res: express.Response
         if (validationResult.success) {
             // create reg DTO
             const adviser = req.body
+            var password = ''
+            if (typeof adviser === 'object' && 'password' in adviser) {
+                password = adviser.password
+            }
             const regDto = {
                 reg_type: 'applicant',
                 user_id: req.body.primary_email,
                 other_names: UtilServices.extractMiddleNames(req.body.full_names),
+                password,
                 adviser
             } as RegistrationDto
 
             let foundResults = await AdviserServices.checkIfAdviserExists(regDto.user_id)
             if (foundResults) {
                 let message = `Applicant with details ${adviser.first_name} ${adviser.last_name},${adviser.primary_email} already exists`
-                res.status(400).send({ status: 'error', message, errorData: {} })
+                res.status(400).send({ status: 'error', message, errorData: message })
                 return
             } else {
                 const createResult = await AdviserServices.createAdviser(
@@ -123,18 +133,23 @@ const newStaffUser = async (req: express.Request, res: express.Response<ApiRespo
         if (validationResult.success) {
             // create reg DTO
             const adviser = req.body
+            var password = ''
+            if (typeof adviser === 'object' && 'password' in adviser) {
+                password = adviser.password
+            }
             const regDto = {
                 reg_type: 'staff',
                 user_id: req.body.primary_email,
                 adviser_user_id: adviser.adviser_user_id,
                 other_names: UtilServices.extractMiddleNames(req.body.full_names),
+                password,
                 adviser
             } as RegistrationDto
 
             let foundResults = await AdviserServices.checkIfAdviserExists(regDto.user_id)
             if (foundResults) {
                 let message = `Staff with details ${adviser.first_name} ${adviser.last_name} - User ID ${adviser.user_id} already exists`
-                res.status(400).send({ status: 'error', message, errorData: {} })
+                res.status(400).send({ status: 'error', message, errorData: message })
                 return
             } else {
                 const createResult = await AdviserServices.createAdviser(
@@ -234,6 +249,24 @@ const getAdviser = async (req: express.Request, res: express.Response<ApiRespons
     }
 }
 
+const searchAdviser = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const { column, param } = req.body
+        
+        const result = await AdviserServices.search('advpt_intermediary_202410022003', column, param )
+        if (result.success) {
+            res.status(200).send({ status: 'success', data: result.data })
+            return
+        } else {
+            res.status(400).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+            return
+        }
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+        return
+    }
+}
+
 //`${config.jwt_validity_secs}s`
 const signIn = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
     const { user_id, password, email } = req.body
@@ -288,6 +321,52 @@ const signIn = async (req: express.Request, res: express.Response<ApiResponse<an
     }
 }
 
+const createOTP = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { user_id, mobile_no } = req.body
+    const otp = UtilServices.generateOTP()
+    const digest = hasher(otp)
+    UtilServices.addOTP(digest)
+    const result = UtilServices.sendSMS(mobile_no, otp)
+    if ((await result).success) {
+        res.status(200).send({
+            status: 'success',
+            data: {
+                user_id, digest
+            }
+        })
+    } else {
+        res.status(400).send({
+            status: 'error',
+            message: 'Unable to send OTP',
+            errorData: 'Unable to send OTP'
+        })
+    }
+}
+
+const setPassword = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { user_id, password, otp_digest } = req.body
+    const otpFound = UtilServices.getOTP(otp_digest)
+    if ( otpFound.success ) {
+        const setRes = await AdviserServices.setPassword(user_id, password)
+        if ( setRes.success ) {
+            res.status(200).send({ status: 'success', data: `Password for ${user_id} set successfully`})
+        } else {
+            res.status(400).send({ 
+                status: 'error', 
+                message: 'Set password failed',
+                errorData: setRes.errorData
+            })
+        }
+    } else {
+        res.status(400).send({ 
+            status: 'error', 
+            message: 'OTP not found',
+            errorData: otpFound.errorData
+        })
+
+    }
+}
+
 export const AdviserController = {
     migrateAdviser,
     newAdviserApplication,
@@ -295,5 +374,8 @@ export const AdviserController = {
     queryPlatformAdviser,
     signIn,
     getAdviser,
-    saveFile
+    saveFile,
+    createOTP,
+    setPassword,
+    searchAdviser
 }

@@ -430,6 +430,7 @@ const testIPRS = async (req: express.Request, res: express.Response) => {
 }
 
 // TODO: this is a Simulation
+/*
 const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
     const data = okIprsQuery()
     const errorData = failedIprsData()
@@ -440,8 +441,9 @@ const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express
     //     errorData
     // })
 }
+*/
 
-const queryIPRS_real = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
+const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
     const { identification, id_type } = req.body
     var err
     try {
@@ -470,7 +472,8 @@ const queryIPRS_real = async (req: express.Request<{}, {}, IPRSRequest>, res: ex
     }
 }
 
-const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
+/*
+const partnerNoQuery_KE_Person_SIM = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
     res.status(200).send({
         status: 'success',
         data: {
@@ -480,8 +483,9 @@ const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumb
         }
     })
 }
+*/
 
-const partnerNoQuery_KE_Person_REAL = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
+const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
     var txRequest = {
         country_id: 1,
         sourceid: 117640,
@@ -546,6 +550,9 @@ const partnerNoQuery_KE_Person_REAL = async (req: express.Request<{}, {}, Partne
     var err
     try {
         const result = await UtilServices.partnerNoQuery(txRequest)
+        console.log('-----------------------------')
+        console.log(`Partner Response: ${JSON.stringify(result)}`)
+        console.log('-----------------------------')
         const { success } = result
         if (success) {
             res.status(200).send({

@@ -37,7 +37,7 @@ CREATE TABLE adviser_nonperson
     id_type character varying(50) NOT NULL,
     date_of_incorporation character varying(50) NOT NULL,
     names character varying(50) NOT NULL,
-    CONSTRAINT adviser_agency_pkey PRIMARY KEY (id_number, id_type)
+    CONSTRAINT adviser_nonperson_pkey PRIMARY KEY (id_number, id_type)
 );
 
 CREATE TABLE adviser_contacts
@@ -182,6 +182,59 @@ CREATE TABLE event_payload
     response jsonb
 );
 
+CREATE TABLE applicant_filedata
+(
+    id SERIAL,
+    user_id character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    file_desc character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    file_data text COLLATE pg_catalog."default",
+    create_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT applicant_filedata_pkey PRIMARY KEY (user_id, file_desc)
+);
+
+CREATE TABLE advpt_customer_202410022003
+(
+    customer_id character varying(200),
+    account_no character varying(200),
+    first_name character varying(200),
+    last_name character varying(200),
+    surname character varying(200),
+    phone character varying(200),
+    email character varying(200),
+    id_no character varying(200),
+    id_type character varying(200),
+    intermediary_code character varying(200),
+    load_date character varying(200)
+);
+
+CREATE TABLE advpt_intermediary_202410022003
+(
+    intermediary_code character varying(200),
+    intermediary_type character varying(200),
+    first_name character varying(200),
+    last_name character varying(200),
+    full_names character varying(200),
+    id_type character varying(200),
+    id_number character varying(200),
+    primary_address character varying(200),
+    secondary_address character varying(200),
+    secondary_city character varying(200),
+    city character varying(200),
+    country character varying(200),
+    primary_phone character varying(200),
+    mobile_no character varying(200),
+    primary_email character varying(200),
+    secondary_phone character varying(200),
+    secondary_mobile character varying(200),
+    secondary_email character varying(200),
+    account_no character varying(200),
+    kra_pin character varying(200),
+    partner_number character varying(200),
+    date_of_birth character varying(200),
+    gender character varying(200),
+    load_date character varying(200)
+);
+
 CREATE OR REPLACE VIEW adviser_nonperson_detailed
  AS
  SELECT 
@@ -224,8 +277,8 @@ GRANT ALL ON event to omserviceuser;
 GRANT ALL ON event_payload to omserviceuser;
 GRANT ALL ON applicant to omserviceuser;
 GRANT ALL ON applicant_filedata to omserviceuser;
-
-
+GRANT ALL ON advpt_intermediary_202410022003 to omserviceuser;
+GRANT ALL ON advpt_customer_202410022003 to omserviceuser;
 
 /* Grants on VIEWS */
 GRANT ALL ON adviser_nonperson_detailed to omserviceuser;
@@ -247,3 +300,5 @@ GRANT ALL ON applicant_id_seq to omserviceuser;
 GRANT ALL ON applicant_filedata_id_seq to omserviceuser;
 
 
+\copy advpt_intermediary_202410022003 FROM '/home/ec2-user/advpt_intermediary_202410022003.csv' DELIMITER '|' HEADER CSV;
+\copy advpt_customer_202410022003 FROM '/home/ec2-user/advpt_customer_202410022003.csv' DELIMITER '|' HEADER CSV;
