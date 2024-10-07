@@ -76,6 +76,20 @@ const swaggerOptions: Options = {
                         country: { type: 'string' }
                     }
                 },
+                Admin: {
+                    type: 'object',
+                    required: [
+                        'id', 'user_id', 'email', 'mobile_no', 'status', 'create_date'
+                    ],
+                    properties: {
+                        id: { type: 'integer' },
+                        user_id: { type: 'string' },
+                        email: { type: 'string' },
+                        mobile_no: { type: 'string' },
+                        status: { type: 'string' },
+                        create_date: { type: 'string' },
+                    }
+                },
                 Staff: {
                     type: 'object',
                     required: [
@@ -115,27 +129,34 @@ const swaggerOptions: Options = {
                         otp_digest: { type: 'string' }
                     }
                 },
-                SearchAdviser: {
+                Condition: {
                     type: 'object',
                     required: [
-                        'column', 'param'
+                        'filexp', 'filval'
                     ],
                     properties: {
-                        column: { type: 'string' },
-                        param: { type: 'string' }
+                        filexp: { type: 'string' },
+                        filval: { type: 'string' }
                     }
                 },
-                Admin: {
+                GetAdviser: {
                     type: 'object',
                     required: [
-                        'id', 'user_id', 'email', 'status', 'create_date'
+                        'user_id', 'filval'
                     ],
                     properties: {
-                        id: { type: 'integer' },
                         user_id: { type: 'string' },
-                        email: { type: 'string' },
-                        status: { type: 'string' },
-                        create_date: { type: 'string' }
+                        filval: { type: 'string' }
+                    }
+                },
+                GetAdviserExt: {
+                    type: 'object',
+                    required: [
+                        'primary_email', 'filval'
+                    ],
+                    properties: {
+                        primary_email: { type: 'string' },
+                        filval: { type: 'string' }
                     }
                 },
                 Event: {
@@ -188,24 +209,33 @@ const swaggerOptions: Options = {
                     type: 'object',
                     required: ['user_id', 'password'],
                     properties: {
-                        user_id: { type: 'string' },
+                        user_id: { type: 'email' },
                         password: { type: 'string' }
+                    }
+                },
+                FileSave: {
+                    type: 'object',
+                    required: [ 'user_id', 'file_desc', 'file_data' ],
+                    properties: {
+                        user_id: { type: 'string' },
+                        file_desc: { type: 'string' },
+                        file_data: { type: 'string' },
                     }
                 },
                 CreateAdmin: {
                     type: 'object',
-                    required: ['user_id', 'password', 'email'],
+                    required: [ 'user_id', 'password', 'email', 'mobile_no' ],
                     properties: {
                         user_id: { type: 'string' },
                         password: { type: 'string' },
-                        email: { type: 'string' }
+                        email: { type: 'email' },
+                        mobile_no: { type: 'string' },
                     }
                 },
                 RootSignIn: {
                     type: 'object',
-                    required: ['user_id', 'secret'],
+                    required: [ 'secret'],
                     properties: {
-                        user_id: { type: 'string' },
                         secret: { type: 'string' }
                     }
                 },
@@ -228,15 +258,14 @@ const swaggerOptions: Options = {
                 Success: {
                     type: 'object',
                     properties: {
-                        success: { type: 'boolean', },
-                        message: { type: 'string' },
+                        status: { type: 'success', },
                         data: { type: 'any' }
                     }
                 },
                 Error: {
                     type: 'object',
                     properties: {
-                        success: { type: 'boolean', },
+                        status: { type: 'error', },
                         message: { type: 'string' },
                         errorData: { type: 'any' }
                     }

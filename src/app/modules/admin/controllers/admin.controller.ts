@@ -12,54 +12,49 @@ import { AdviserServices } from '../../v1/advisers/services/adviser.services'
 import { IPRSRequest } from '../../../shared/dto/external/iprs/request/iprs.req'
 import { PartnerNumberRequest } from '../../../shared/dto/external/partner_mgmt/request/partner.no.req'
 import { failedIprsData, okIprsQuery } from '../../../shared/dto/mocks/mock.data'
+import { AdviserStatus } from '../../../shared/constants'
+import { AdviserValidationSchemas } from '../../v1/advisers/model/adviser.validation'
 
 // : Promise<void>
 const log: debug.IDebugger = debug('app:advisers-controller')
 
+// ------------------------------------------------------------------------------------------------------------
+// Actions (add, update, delete)
+// ------------------------------------------------------------------------------------------------------------
 const rootSignIn = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
-    const { user_id, secret, email } = req.body
+    const { secret } = req.body
     const validationResult = AdminValidationSchemas.rootSignIn.safeParse({ secret })
     if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
         const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
         const storeEvent = {
-            user_id, event_type: 'root sign in', endpoint: 'admin/rootSignIn', direction: '', process: 'rootSignIn', status: 'error', result: JSON.stringify(errorLists)
+            user_id: 'root', event_type: 'root sign in', endpoint: 'admin/rootSignIn', direction: '', process: 'rootSignIn', status: 'error', result: JSON.stringify(errorLists)
         }
         var eResult = UtilServices.storeEvent(storeEvent)
-        res.status(400).send({
-            status: 'error',
-            message: 'Validation failed',
-            errorData: errorLists
-        })
+        res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
         return
     }
-    if (validationResult.success) {
-        const result = await AdminServices.rootSignIn(secret)
-        if (result.success) {
-            const token = result.data || ''
-            const storeEvent = {
-                user_id, event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'success', result: { status: 'success' }
-            }
-            var eResult = UtilServices.storeEvent(storeEvent)
-            res.header("x-access-token", token)
-            res.status(200).send({
-                status: 'success',
-                data: {
-                    message: `Authenticated. Token valid for ${config.jwt_validity}`,
-                    token,
-                    validity: `${config.jwt_validity}`
-                }
-            })
-        } else {
-            const storeEvent = {
-                user_id, event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'error', result: JSON.stringify(result.errorData)
-            }
-            var eResult = UtilServices.storeEvent(storeEvent)
-            res.status(400).send({
-                status: 'error',
-                message: 'Sign In failed',
-                errorData: result.errorData
-            })
+    const result = await AdminServices.rootSignIn(secret)
+    if (result.success) {
+        const token = result.data || ''
+        const storeEvent = {
+            user_id: 'root', event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'success', result: { status: 'success' }
         }
+        var eResult = UtilServices.storeEvent(storeEvent)
+        res.header("x-access-token", token)
+        res.status(200).send({
+            status: 'success',
+            data: {
+                message: `Authenticated. Token valid for ${config.jwt_validity}`,
+                token,
+                validity: `${config.jwt_validity}`
+            }
+        })
+    } else {
+        const storeEvent = {
+            user_id: 'root', event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'error', result: JSON.stringify(result.errorData)
+        }
+        var eResult = UtilServices.storeEvent(storeEvent)
+        res.status(400).send({ status: 'error', message: 'Sign In failed', errorData: result.errorData })
     }
 }
 
@@ -79,278 +74,418 @@ const adminSignIn = async (req: express.Request, res: express.Response<ApiRespon
         })
         return
     }
-    if (validationResult.success) {
-        const result = await AdminServices.adminSignIn(user_id, password)
-        if (result.success) {
-            const token = result.data || ''
-            const storeEvent = {
-                user_id: user_id, event_type: 'admin sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'success', result: { status: 'success' }
-            }
-            var eResult = UtilServices.storeEvent(storeEvent)
-            res.header("x-access-token", token)
-            res.status(200).send({
-                status: 'success',
-                data: {
-                    message: `Authenticated. Token valid for ${config.jwt_validity}`,
-                    token,
-                    validity: `${config.jwt_validity}`
-                }
-            })
-        } else {
-            const storeEvent = {
-                user_id: user_id, event_type: 'admin sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'error', result: JSON.stringify(result.errorData)
-            }
-            var eResult = UtilServices.storeEvent(storeEvent)
-            res.status(400).send({
-                status: 'error',
-                message: 'Sign In failed',
-                errorData: result.errorData
-            })
+    const result = await AdminServices.adminSignIn(user_id, password)
+    if (result.success) {
+        const token = result.data || ''
+        const storeEvent = {
+            user_id: user_id, event_type: 'admin sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'success', result: { status: 'success' }
         }
+        var eResult = UtilServices.storeEvent(storeEvent)
+        res.header("x-access-token", token)
+        res.status(200).send({
+            status: 'success',
+            data: {
+                message: `Authenticated. Token valid for ${config.jwt_validity}`,
+                token,
+                validity: `${config.jwt_validity}`
+            }
+        })
+    } else {
+        const storeEvent = {
+            user_id: user_id, event_type: 'admin sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'error', result: JSON.stringify(result.errorData)
+        }
+        var eResult = UtilServices.storeEvent(storeEvent)
+        res.status(result.code).send({
+            status: 'error',
+            message: 'Sign-in failed',
+            errorData: result.errorData
+        })
     }
 }
 
 const createAdmin = async (req: express.Request<{}, {}, AdminDto>, res: express.Response<ApiResponse<any, any>>) => {
-    try {
-        const validationResult = AdminValidationSchemas.adminSignIn.safeParse(req.body)
-        if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
-            const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
-            res.status(400).send({
-                status: 'error',
-                message: 'Validation failed',
-                errorData: errorLists
-            })
-            return
-        }
-        if (validationResult.success) {
-            // check exists
-            const { user_id } = req.body
-            let exists = await AdminServices.checkIfAdminExists(user_id)
-            if (exists) {
-                res.status(400).send({
-                    status: 'error',
-                    message: 'Registration failed',
-                    errorData: `Admin with user_id: [ ${user_id} ] exists`
-                })
-                return
-            }
-
-            const result = await AdminServices.createAdmin(req.body)
-            if (result.success) {
-                res.status(200).send({
-                    status: 'success',
-                    data: result.data
-                })
-                return
-            } else {
-                res.status(500).send({
-                    status: 'error',
-                    message: 'Registration failed',
-                    errorData: result.errorData
-                })
-                return
-            }
-        }
-    } catch (error) {
-        res.status(500).send({
+    const validationResult = AdminValidationSchemas.adminCreate.safeParse(req.body)
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({
+            status: 'error',
+            message: 'Validation failed',
+            errorData: errorLists
+        })
+        return
+    }
+    // check exists
+    const { user_id } = req.body
+    let exists = await AdminServices.checkIfAdminExists(user_id)
+    if (exists) {
+        res.status(400).send({
             status: 'error',
             message: 'Registration failed',
-            errorData: JSON.stringify(error)
+            errorData: `Admin with user_id: [ ${user_id} ] exists`
+        })
+        return
+    }
+
+    const result = await AdminServices.createAdmin(req.body)
+    if (result.success) {
+        res.status(200).send({
+            status: 'success',
+            data: result.data
+        })
+        return
+    } else {
+        res.status(result.code).send({
+            status: 'error',
+            message: 'Registration failed',
+            errorData: result.errorData
         })
         return
     }
 }
 
 const updateAdminStatus = async (req: express.Request<{}, {}, UpdateDto<any>>, res: express.Response<ApiResponse<any, any>>) => {
-    try {
-        const { user_id, status } = req.body
-        const validationResult = AdminValidationSchemas.adminStatusUpdate.safeParse({ user_id, status })
-        if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
-            const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
-            res.status(400).send({
-                status: 'error',
-                message: 'Validation failed',
-                errorData: errorLists
-            })
-            return
-        }
-        if (validationResult.success) {
-            let foundResults = await AdminServices.checkIfAdminExists(user_id)
-            if (foundResults !== true) {
-                res.status(400).send({
-                    status: 'error',
-                    message: 'Update failed',
-                    errorData: `Admin with user_id: [ ${user_id} ] does not exist`
-                })
-                return
-            }
-            const result = await AdminServices.updateAdminStatus(user_id, status)
-            if (result.success) {
-                res.status(200).send({
-                    status: 'success',
-                    data: result
-                })
-                return
-            } else {
-                res.status(400).send({
-                    status: 'error',
-                    message: 'Failed',
-                    errorData: result.errorData
-                })
-                return
-            }
-        }
-    } catch (error) {
-        res.status(500).send({
+    const { user_id, status } = req.body
+    const validationResult = AdminValidationSchemas.adminStatusUpdate.safeParse({ user_id, status })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({
             status: 'error',
-            message: 'Error occurred',
-            errorData: error
+            message: 'Validation failed',
+            errorData: errorLists
         })
         return
     }
-}
-
-const getAdvisersWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
-    try {
-        const { page, limit } = req.params
-
-        // Arggh this is very ugly
-        const cfg_page_size = parseInt(config.page_size as string) || 25
-        const vPage = (parseInt(page as string) || 0)
-        const vLimit = (parseInt(limit as string) || 0)
-        var new_limit = 0, new_page = 1
-        new_page = vPage <= 0 ? 1 : vPage
-        new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
-        const result = await AdminServices.getAdvisersWithPaging(new_page, new_limit)
+    const result = await AdminServices.updateAdminStatus(user_id, status)
+    if (result.success) {
         res.status(200).send({
             status: 'success',
             data: result
         })
         return
-    } catch (error) {
-        res.status(500).send({
+    } else {
+        res.status(result.code).send({
             status: 'error',
-            message: 'Error occurred',
-            errorData: error
+            message: 'Failed',
+            errorData: result.errorData
         })
         return
     }
-
-}
-
-const getAdviser = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
-    try {
-        const { user_id } = req.params
-        if (!user_id) {
-            res.status(400).send({
-                status: 'error',
-                message: 'user_id not valid',
-            })
-            return
-        }
-        const result = await AdminServices.getAdviser(user_id)
-        if (result.success) {
-            res.status(200).send({
-                status: 'success',
-                data: result
-            })
-            return
-        } else {
-            res.status(400).send({
-                status: 'error',
-                message: 'Failed',
-                errorData: result.errorData
-            })
-            return
-        }
-
-    } catch (error) {
-        res.status(500).send({
-            status: 'error',
-            message: 'Error occurred',
-            errorData: error
-        })
-        return
-    }
-
 }
 
 const updateAdviserStatus = async (req: express.Request<{}, {}, UpdateDto<any>>, res: express.Response<ApiResponse<any, any>>) => {
+    const { user_id, status } = req.body
+    const validationResult = AdminValidationSchemas.adminStatusUpdate.safeParse({ user_id, status })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({
+            status: 'error',
+            message: 'Validation failed',
+            errorData: errorLists
+        })
+        return
+    }
+    const result = await AdminServices.updateAdviserStatus(user_id, status)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+        return
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+        return
+    }
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// Data Extraction - Lists
+// ------------------------------------------------------------------------------------------------------------
+// Special case of getAdvisers (AdviserStatus.Pending_Approval)
+const getNewApplicantsWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { page, page_size } = req.params
+
+    const validationResult = AdminValidationSchemas.pagingCheck.safeParse({ page, page_size })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+        return
+    }
+    // Arggh this is very ugly
+    const cfg_page_size = parseInt(config.page_size as string) || 25
+    const vPage = (parseInt(page as string) || 0)
+    const vLimit = (parseInt(page_size as string) || 0)
+    var new_limit = 0, new_page = 1
+    new_page = vPage <= 0 ? 1 : vPage
+    new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+    const result = await AdminServices.getAdvisersWithConditionAndPaging(new_page, new_limit, 'adviser_status', AdviserStatus.Pending_Approval)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
+// Special case of getAdvisers (AdviserStatus.Pending_Approval)
+const getNewApplicants = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const result = await AdminServices.getAdvisersWithCondition('adviser_status', AdviserStatus.Pending_Approval)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
+// Reverse case of getNewApplicants ( ! AdviserStatus.Pending_Approval)
+const getAdvisersWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { page, page_size } = req.params
+    const validationResult = AdminValidationSchemas.pagingCheck.safeParse({ page, page_size })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+        return
+    }
+    // Arggh this is very ugly
+    const cfg_page_size = parseInt(config.page_size as string) || 25
+    const vPage = (parseInt(page as string) || 0)
+    const vLimit = (parseInt(page_size as string) || 0)
+    var new_limit = 0, new_page = 1
+    new_page = vPage <= 0 ? 1 : vPage
+    new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+    const result = await AdminServices.getAdvisersWithNotConditionAndPaging(new_page, new_limit, 'adviser_status', AdviserStatus.Pending_Approval)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
+// Reverse case of getNewApplicants ( ! AdviserStatus.Pending_Approval)
+const getAdvisers = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const result = await AdminServices.getAdvisersWithNotCondition('adviser_status', AdviserStatus.Pending_Approval)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
+const getALLAdvisersWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { page, page_size } = req.params
+    const validationResult = AdminValidationSchemas.pagingCheck.safeParse({ page, page_size })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+        return
+    }
+    // Arggh this is very ugly
+    const cfg_page_size = parseInt(config.page_size as string) || 25
+    const vPage = (parseInt(page as string) || 0)
+    const vLimit = (parseInt(page_size as string) || 0)
+    var new_limit = 0, new_page = 1
+    new_page = vPage <= 0 ? 1 : vPage
+    new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+    const result = await AdminServices.getAdvisersWithPaging(new_page, new_limit)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
+const getALLAdvisers = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const result = await AdminServices.getAdvisers()
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
+const getEventsWithConditionAndPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
     try {
-        const { user_id, status } = req.body
-        const validationResult = AdminValidationSchemas.adminStatusUpdate.safeParse({ user_id, status })
+        const { page, page_size } = req.params
+        const { filexp, filval } = req.body
+        const validationResult = AdminValidationSchemas.conditionAndPagingCheck.safeParse({ page, page_size, filexp, filval })
         if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
             const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
-            res.status(400).send({
-                status: 'error',
-                message: 'Validation failed',
-                errorData: errorLists
-            })
+            res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
             return
         }
-        if (validationResult.success) {
-            let foundResults = await AdviserServices.checkIfAdviserExists(user_id)
-            if (foundResults !== true) {
-                res.status(400).send({
-                    status: 'error',
-                    message: 'Update failed',
-                    errorData: `Admin with user_id: [ ${user_id} ] does not exist`
-                })
-                return
-            }
 
-            const result = await AdminServices.updateAdviserStatus(user_id, status)
-            if (result.success) {
-                res.status(200).send({
-                    status: 'success',
-                    data: result
-                })
-                return
-            } else {
-                res.status(400).send({
-                    status: 'error',
-                    message: 'Failed',
-                    errorData: result.errorData
-                })
-                return
-            }
-        }
+        // TODO: make this more general??
+        const cfg_page_size = parseInt(config.page_size as string) || 25
+        const vPage = (parseInt(page as string) || 0)
+        const vLimit = (parseInt(page_size as string) || 0)
+        var new_limit = 0, new_page = 1
+        new_page = vPage <= 0 ? 1 : vPage
+        new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+        const result = await AdminServices.getEventsWithConditionAndPaging(new_page, new_limit, filexp, filval)
+        res.status(200).send({ status: 'success', data: result })
+        return
     } catch (error) {
-        res.status(500).send({
-            status: 'error',
-            message: 'Error occurred',
-            errorData: error
-        })
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+        return
+    }
+
+}
+
+const getEventsWithCondition = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const { filexp, filval } = req.body
+        const validationResult = AdminValidationSchemas.conditionCheck.safeParse({ filexp, filval })
+        if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+            const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+            res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+            return
+        }
+
+        const result = await AdminServices.getEventsWithCondition(filexp, filval)
+        res.status(200).send({ status: 'success', data: result })
+        return
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
         return
     }
 }
 
 const getEventsWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
     try {
-        const { page, limit } = req.params
+        const { page, page_size } = req.params
+        const validationResult = AdminValidationSchemas.pagingCheck.safeParse({ page, page_size })
+        if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+            const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+            res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+            return
+        }
 
         // TODO: make this more general??
         const cfg_page_size = parseInt(config.page_size as string) || 25
         const vPage = (parseInt(page as string) || 0)
-        const vLimit = (parseInt(limit as string) || 0)
+        const vLimit = (parseInt(page_size as string) || 0)
         var new_limit = 0, new_page = 1
         new_page = vPage <= 0 ? 1 : vPage
         new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
         const result = await AdminServices.getEventsWithPaging(new_page, new_limit)
-        res.status(200).send({
-            status: 'success',
-            data: result
-        })
+        res.status(200).send({ status: 'success', data: result })
         return
     } catch (error) {
-        res.status(500).send({
-            status: 'error',
-            message: 'Error occurred',
-            errorData: error
-        })
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
         return
     }
+}
 
+const getEvents = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const result = await AdminServices.getEvents()
+        res.status(200).send({ status: 'success', data: result })
+        return
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+        return
+    }
+}
+
+const getAdminsWithConditionAndPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const { page, page_size } = req.params
+        const { filexp, filval } = req.body
+        const validationResult = AdminValidationSchemas.conditionAndPagingCheck.safeParse({ page, page_size, filexp, filval })
+        if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+            const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+            res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+            return
+        }
+        const cfg_page_size = parseInt(config.page_size as string) || 25
+        const vPage = (parseInt(page as string) || 0)
+        const vLimit = (parseInt(page_size as string) || 0)
+        var new_limit = 0, new_page = 1
+        new_page = vPage <= 0 ? 1 : vPage
+        new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+        const result = await AdminServices.getAdminsWithConditionAndPaging(new_page, new_limit, filexp, filval)
+        if ( result.success ) {
+            res.status(200).send({ status: 'success', data: result })
+        } else {
+            res.status(result.code).send({ status: 'error', 
+                message: result.message || 'No records found',
+                errorData: result.errorData })
+        }
+    } catch (error) {
+        if ( typeof error == 'object' && error) {
+            if ('success' in error ) delete error['success']
+            if ('code' in error ) delete error['code']
+        }
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+    }
+}
+
+const getAdminsWithCondition = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const { filexp, filval } = req.body
+        const validationResult = AdminValidationSchemas.conditionCheck.safeParse({ filexp, filval })
+        if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+            const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+            res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+            return
+        }
+        const result = await AdminServices.getAdminsWithCondition(filexp, filval)
+        if ( result.success ) {
+            res.status(200).send({ status: 'success', data: result })
+        } else {
+            res.status(result.code).send({ status: 'error', 
+                message: result.message || 'No records found',
+                errorData: result.errorData })
+        }
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+    }
+}
+
+const getAdminsWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const { page, page_size } = req.params
+
+        // Arggh this is very ugly
+        const cfg_page_size = parseInt(config.page_size as string) || 25
+        const vPage = (parseInt(page as string) || 0)
+        const vLimit = (parseInt(page_size as string) || 0)
+        var new_limit = 0, new_page = 1
+        new_page = vPage <= 0 ? 1 : vPage
+        new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
+        const result = await AdminServices.getAdminsWithPaging(new_page, new_limit)
+        res.status(200).send({ status: 'success', data: result })
+        return
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+        return
+    }
+}
+
+const getAdmins = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    try {
+        const result = await AdminServices.getAdmins()
+        res.status(200).send({ status: 'success', data: result })
+        return
+    } catch (error) {
+        res.status(500).send({ status: 'error', message: 'Error occurred', errorData: error })
+        return
+    }
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// Data Extraction - Entity
+// ------------------------------------------------------------------------------------------------------------
+
+const getAdviser = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { user_id } = req.params
+    const validationResult = AdviserValidationSchemas.user_id.safeParse({ user_id })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Invalid user_id', errorData: errorLists })
+        return
+    }
+    const result = await AdviserServices.getAdviser(user_id)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result.data })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+    }
 }
 
 const getEvent = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
@@ -390,35 +525,7 @@ const getEvent = async (req: express.Request, res: express.Response<ApiResponse<
 
 }
 
-const getAdminsWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
-    try {
-        const { page, limit } = req.params
-
-        // Arggh this is very ugly
-        const cfg_page_size = parseInt(config.page_size as string) || 25
-        const vPage = (parseInt(page as string) || 0)
-        const vLimit = (parseInt(limit as string) || 0)
-        var new_limit = 0, new_page = 1
-        new_page = vPage <= 0 ? 1 : vPage
-        new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
-        const result = await AdminServices.getAdminsWithPaging(new_page, new_limit)
-        res.status(200).send({
-            status: 'success',
-            data: result
-        })
-        return
-    } catch (error) {
-        res.status(500).send({
-            status: 'error',
-            message: 'Error occurred',
-            errorData: error
-        })
-        return
-    }
-
-}
-
-const testIPRS = async (req: express.Request, res: express.Response) => {
+const getIPRSToken = async (req: express.Request, res: express.Response) => {
     var fres
     try {
         const result = await UtilServices.iprsGetToken()
@@ -429,20 +536,6 @@ const testIPRS = async (req: express.Request, res: express.Response) => {
     res.status(200).send(fres)
 }
 
-// TODO: this is a Simulation
-/*
-const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
-    const data = okIprsQuery()
-    const errorData = failedIprsData()
-    res.status(200).send({ status: 'success', data })
-    // res.status(500).send({
-    //     status: 'error',
-    //     message: '@Controller (Mock) - @queryIPRS/else - An error occurred',
-    //     errorData
-    // })
-}
-*/
-
 const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
     const { identification, id_type } = req.body
     var err
@@ -451,39 +544,15 @@ const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express
         const { success } = result
         if (success) {
             const { data } = result
-            res.status(200).send({
-                status: 'success',
-                data
-            })
+            res.status(200).send({ status: 'success', data })
         } else {
-            res.status(500).send({
-                status: 'error',
-                message: '@Controller - @queryIPRS/else - An error occurred',
-                errorData: result.errorData
-            })
+            res.status(500).send({ status: 'error', message: '@Controller - @queryIPRS/else - An error occurred', errorData: result.errorData })
         }
     } catch (error) {
         err = JSON.stringify(error)
-        res.status(500).send({
-            status: 'error',
-            message: '@Controller - @queryIPRS/catch - An error occurred',
-            errorData: err
-        })
+        res.status(500).send({ status: 'error', message: '@Controller - @queryIPRS/catch - An error occurred', errorData: err })
     }
 }
-
-/*
-const partnerNoQuery_KE_Person_SIM = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
-    res.status(200).send({
-        status: 'success',
-        data: {
-            Code: 200,
-            Status: 'success',
-            partnerNumber: '1001171133'
-        }
-    })
-}
-*/
 
 const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
     var txRequest = {
@@ -579,15 +648,33 @@ const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumb
 export const AdminController = {
     rootSignIn,
     adminSignIn,
+
     createAdmin,
     updateAdminStatus,
-    getAdvisersWithPaging,
-    getAdviser,
     updateAdviserStatus,
+
+    getNewApplicantsWithPaging,
+    getNewApplicants,
+    getAdvisersWithPaging,
+    getAdvisers,
+    getALLAdvisersWithPaging,
+    getALLAdvisers,
+
+    getEventsWithConditionAndPaging,
+    getEventsWithCondition,
     getEventsWithPaging,
-    getEvent,
+    getEvents,
+
+    getAdminsWithConditionAndPaging,
+    getAdminsWithCondition,
     getAdminsWithPaging,
-    testIPRS,
-    queryIPRS,
-    partnerNoQuery_KE_Person
+    getAdmins,
+
+    partnerNoQuery_KE_Person,
+
+    getAdviser,
+    getEvent,
+
+    getIPRSToken,
+    queryIPRS
 }

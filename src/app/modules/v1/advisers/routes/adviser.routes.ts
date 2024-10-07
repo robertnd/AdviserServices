@@ -7,7 +7,7 @@ const router = express.Router()
 
 /**
  * @swagger
- * /adviser/adviser-migration:
+ * /adviser/migrate-adviser:
  *   post:
  *     summary: Creates an existing adviser on the platform
  *     description: Creates an existing adviser on the platform
@@ -39,7 +39,7 @@ const router = express.Router()
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/adviser-migration", AdviserController.migrateAdviser)
+router.post("/migrate-adviser", AdviserController.migrateAdviser)
 
 /**
  * @swagger
@@ -67,13 +67,49 @@ router.post("/adviser-migration", AdviserController.migrateAdviser)
  *                 advisers:
  *                   type: object
  *                   schema:
- *                     $ref: '#/components/schemas/Adviser'
+ *                     $ref: '#/components/schemas/GetAdviser'
  *       400:
  *         description: Invalid query parameters
  *       500:
  *         description: Server error
  */
-router.get("/get-adviser/:user_id", verifyToken, AdviserController.getAdviser)
+router.get("/get-adviser/:user_id", AdviserController.getAdviser)
+
+/**
+ * @swagger
+ * /adviser/get-adviser-ext:
+ *   post:
+ *     summary: Search for Adviser (External System)
+ *     description: Search for Adviser (External System)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Condition'
+ *     responses:
+ *       200:
+ *         description: Successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: A client error occurred
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post("/get-adviser-ext", AdviserController.getAdviserExternal)
 
 /**
  * @swagger
@@ -111,7 +147,7 @@ router.post("/sign-in", AdviserController.signIn)
 
 /**
  * @swagger
- * /adviser/adviser-application:
+ * /adviser/new-adviser-application:
  *   post:
  *     summary: Creates an adviser application
  *     description: Creates an adviser application
@@ -143,13 +179,47 @@ router.post("/sign-in", AdviserController.signIn)
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/adviser-application", AdviserController.newAdviserApplication)
-
-router.post("/adviser-application-file", AdviserController.saveFile)
+router.post("/new-adviser-application", AdviserController.newAdviserApplication)
 
 /**
  * @swagger
- * /adviser/adviser-user:
+ * /adviser/new-adviser-application-file:
+ *   post:
+ *     summary: Uploads files related to a new application
+ *     description: Uploads files related to a new application
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SaveFile'
+ *     responses:
+ *       200:
+ *         description: Successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: A client error occurred
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post("/new-adviser-application-file", AdviserController.saveFile)
+
+/**
+ * @swagger
+ * /adviser/new-adviser-staff:
  *   post:
  *     summary: Creates a staff user
  *     description: Creates a staff user
@@ -181,7 +251,7 @@ router.post("/adviser-application-file", AdviserController.saveFile)
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/adviser-user", AdviserController.newStaffUser)
+router.post("/new-adviser-staff", AdviserController.newStaffUser)
 
 /**
  * @swagger
@@ -254,41 +324,5 @@ router.post("/get-otp", AdviserController.createOTP)
  *               $ref: '#/components/schemas/Error'
  */
 router.post("/set-password", AdviserController.setPassword)
-
-/**
- * @swagger
- * /adviser/search-adviser:
- *   post:
- *     summary: Search for Adviser
- *     description: Search for Adviser
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/SearchAdviser'
- *     responses:
- *       200:
- *         description: Successful
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Success'
- *       400:
- *         description: A client error occurred
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post("/search-adviser", AdviserController.searchAdviser)
 
 export const AdviserRoutes = router

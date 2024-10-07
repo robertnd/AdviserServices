@@ -10,7 +10,7 @@ const router = express.Router()
  * /admin/root-sign-in:
  *   post:
  *     summary: Root sign-In
- *     description: Sign-In for Root user, authenticates and issues a valid bearer token
+ *     description: Sign-In for root user, authenticates and issues a valid bearer token
  *     requestBody:
  *       required: true
  *       content:
@@ -44,7 +44,7 @@ router.post("/root-sign-in", AdminController.rootSignIn)
  * /admin/admin-sign-in:
  *   post:
  *     summary: Admin sign-In
- *     description: Sign-In for Admin user, authenticates and issues a valid bearer token
+ *     description: Sign-In for admin user, authenticates and issues a valid bearer token
  *     requestBody:
  *       required: true
  *       content:
@@ -78,7 +78,7 @@ router.post("/admin-sign-in", AdminController.adminSignIn)
  * /admin/create-admin:
  *   post:
  *     summary: Creates a new Admin
- *     description: Creates a new Admin. Must be logged in as Root to complete this action
+ *     description: Creates a new admin. Must be logged in as Root to complete this action
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -107,14 +107,14 @@ router.post("/admin-sign-in", AdminController.adminSignIn)
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/create-admin", verifyToken, isRoot, AdminController.createAdmin)
+router.post("/create-admin", AdminController.createAdmin)
 
 /**
  * @swagger
  * /admin/update-admin-status:
  *   post:
  *     summary: Updates the status of an Admin
- *     description: Updates the status of an Admin. Must be logged in as Root to complete this action
+ *     description: Updates the status of an Admin. Must be logged in as Root to complete this action.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -147,134 +147,10 @@ router.post("/update-admin-status", verifyToken, isRoot, AdminController.updateA
 
 /**
  * @swagger
- * /admin/get-admins/{page}/{limit}:
- *   get:
- *     summary: Returns a list of administrators
- *     description: Fetch a paginated list of items with limit and page parameters
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: page
- *         in: path
- *         description: The page number. Defaults to 1 if not provided.
- *         required: true
- *         schema:
- *           type: integer
- *           format: int32
- *           example: 1
- *       - name: limit
- *         in: path
- *         description: The number of items to display per page. Defaults to 25 if not provided.
- *         required: true
- *         schema:
- *           type: integer
- *           format: int32
- *           example: 10
- *     responses:
- *       200:
- *         description: A list of administrators (paginated)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 page:
- *                   type: integer
- *                   format: int32
- *                   example: 1
- *                 limit:
- *                   type: integer
- *                   format: int32
- *                   example: 10
- *                 totalItems:
- *                   type: integer
- *                   format: int32
- *                   example: 100
- *                 totalPages:
- *                   type: integer
- *                   format: int32
- *                   example: 10
- *                 advisers:
- *                   type: array
- *                   advisers:
- *                     type: object
- *                     schema:
- *                       $ref: '#/components/schemas/Admin'
- *       400:
- *         description: A client error occurred
- *       500:
- *         description: Server error
- */
-router.get("/get-admins/:page/:limit", verifyToken, isAdmin, AdminController.getAdminsWithPaging)
-
-/**
- * @swagger
- * /admin/get-advisers/{page}/{limit}:
- *   get:
- *     summary: Returns a list of advisers
- *     description: Fetch a paginated list of items with limit and page parameters
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: page
- *         in: path
- *         description: The page number. Defaults to 1 if not provided.
- *         required: true
- *         schema:
- *           type: integer
- *           format: int32
- *           example: 1
- *       - name: limit
- *         in: path
- *         description: The number of items to display per page. Defaults to 25 if not provided.
- *         required: true
- *         schema:
- *           type: integer
- *           format: int32
- *           example: 10
- *     responses:
- *       200:
- *         description: A list of advisers (paginated)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 page:
- *                   type: integer
- *                   format: int32
- *                   example: 1
- *                 limit:
- *                   type: integer
- *                   format: int32
- *                   example: 10
- *                 totalItems:
- *                   type: integer
- *                   format: int32
- *                   example: 100
- *                 totalPages:
- *                   type: integer
- *                   format: int32
- *                   example: 10
- *                 advisers:
- *                   type: array
- *                   advisers:
- *                     type: object
- *                     schema:
- *                       $ref: '#/components/schemas/Adviser'
- *       400:
- *         description: A client error occurred
- *       500:
- *         description: Server error
- */
-router.get("/get-advisers/:page/:limit", verifyToken, isAdmin, AdminController.getAdvisersWithPaging)
-
-/**
- * @swagger
  * /admin/update-adviser-status:
  *   post:
- *     summary: Update adviser status
- *     description: Update adviser status
+ *     summary: Updates the status of an adviser
+ *     description: Updates the status of an adviser
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -285,7 +161,7 @@ router.get("/get-advisers/:page/:limit", verifyToken, isAdmin, AdminController.g
  *             $ref: '#/components/schemas/AdviserStatusUpdate'
  *     responses:
  *       200:
- *         description: Adviser found.
+ *         description: Successful
  *         content:
  *           application/json:
  *             schema:
@@ -304,6 +180,775 @@ router.get("/get-advisers/:page/:limit", verifyToken, isAdmin, AdminController.g
  *               $ref: '#/components/schemas/Error'
  */
 router.post("/update-adviser-status", verifyToken, isAdmin, AdminController.updateAdviserStatus)
+
+/**
+ * @swagger
+ * /admin/get-new-applicants-with-paging/{page}/{page_size}:
+ *   get:
+ *     summary: Returns a paged list of new applicants (status = Pending_Approval)
+ *     description: Returns a paged list of new applicants (status = Pending_Approval)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-new-applicants-with-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getNewApplicantsWithPaging)
+
+/**
+ * @swagger
+ * /admin/get-new-applicants:
+ *   get:
+ *     summary: Returns a list of advisers (status = Pending_Approval)
+ *     description: Returns a list of advisers (status = Pending_Approval)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Applicant'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-new-applicants", verifyToken, isAdmin, AdminController.getNewApplicants)
+
+/**
+ * @swagger
+ * /admin/get-advisers-with-paging/{page}/{page_size}:
+ *   get:
+ *     summary: Returns a paged list of advisers (vetted)
+ *     description: Returns a paged list of advisers (vetted)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Adviser'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-advisers-with-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getAdvisersWithPaging)
+
+/**
+ * @swagger
+ * /admin/get-advisers:
+ *   get:
+ *     summary: Returns a list of advisers (vetted)
+ *     description: Returns a list of advisers (vetted)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Adviser'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-advisers", verifyToken, isAdmin, AdminController.getAdvisers)
+
+/**
+ * @swagger
+ * /admin/get-all-advisers-with-paging/{page}/{page_size}:
+ *   get:
+ *     summary: Returns a paged list of all advisers (vetted and applicants)
+ *     description: Returns a paged list of all advisers (vetted and applicants)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: A list of events (paginated)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Adviser'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-all-advisers-with-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getALLAdvisersWithPaging)
+
+/**
+ * @swagger
+ * /admin/get-all-advisers:
+ *   get:
+ *     summary: Returns a list of advisers (vetted)
+ *     description: Returns a list of advisers (vetted)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of events (paginated)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Adviser'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-all-advisers", verifyToken, isAdmin, AdminController.getALLAdvisers)
+
+/**
+ * @swagger
+ * /admin/get-events-with-condition-and-paging/{page}/{page_size}:
+ *   post:
+ *     summary: Returns a paged list of events
+ *     description: Returns a paged list of events
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Condition'
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.post("/get-events-with-condition-and-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getEventsWithConditionAndPaging)
+
+/**
+ * @swagger
+ * /admin/get-events-with-condition:
+ *   post:
+ *     summary: Returns a list of events
+ *     description: Returns a list of events
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Condition'
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.post("/get-events-with-condition", verifyToken, isAdmin, AdminController.getEventsWithCondition)
+
+/**
+ * @swagger
+ * /admin/get-events/{page}/{page_size}:
+ *   get:
+ *     summary: Returns a list of events
+ *     description: Fetch a paginated list of items with limit and page parameters.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-events-with-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getEventsWithPaging)
+
+/**
+ * @swagger
+ * /admin/get-events:
+ *   get:
+ *     summary: Returns a list of events
+ *     description: Returns a list of events
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-events", verifyToken, isAdmin, AdminController.getEvents)
+
+/**
+ * @swagger
+ * /admin/get-admins-with-condition-and-paging/{page}/{page_size}:
+ *   post:
+ *     summary: 
+ *     description: 
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Condition'
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Returns a paged list of admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Admin'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.post("/get-admins-with-condition-and-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getAdminsWithConditionAndPaging)
+
+/**
+ * @swagger
+ * /admin/get-admins-with-condition:
+ *   post:
+ *     summary: 
+ *     description: 
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Condition'
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Admin'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.post("/get-admins-with-condition", verifyToken, isAdmin, AdminController.getAdminsWithCondition)
+
+/**
+ * @swagger
+ * /admin/get-admins/{page}/{page_size}:
+ *   get:
+ *     summary: Returns a paged list of admins
+ *     description: Returns a paged list of admins
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: path
+ *         description: The page number. Defaults to 1 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 1
+ *       - name: page_size
+ *         in: path
+ *         description: The number of items to display per page. Defaults to 25 if not provided.
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           format: int32
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 advisers:
+ *                   type: array
+ *                   advisers:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Admin'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-admins-with-paging/:page/:page_size", verifyToken, isAdmin, AdminController.getAdminsWithPaging)
+
+/**
+ * @swagger
+ * /admin/get-events:
+ *   get:
+ *     summary: Returns a list of events
+ *     description: Returns a list of events
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Admin'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-admins", verifyToken, isAdmin, AdminController.getAdmins)
+
+
+router.post("/query-iprs", verifyToken, isAdmin, AdminController.queryIPRS)
+router.post("/get-iprs-token", verifyToken, isAdmin, AdminController.getIPRSToken)
 
 /**
  * @swagger
@@ -341,68 +986,6 @@ router.get("/get-adviser/:user_id", verifyToken, isAdmin, AdminController.getAdv
 
 /**
  * @swagger
- * /admin/get-events/{page}/{limit}:
- *   get:
- *     summary: Returns a list of events
- *     description: Fetch a paginated list of items with limit and page parameters.
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: page
- *         in: path
- *         description: The page number. Defaults to 1 if not provided.
- *         required: true
- *         schema:
- *           type: integer
- *           format: int32
- *           example: 1
- *       - name: limit
- *         in: path
- *         description: The number of items to display per page. Defaults to 25 if not provided.
- *         required: true
- *         schema:
- *           type: integer
- *           format: int32
- *           example: 10
- *     responses:
- *       200:
- *         description: A list of events (paginated)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 page:
- *                   type: integer
- *                   format: int32
- *                   example: 1
- *                 limit:
- *                   type: integer
- *                   format: int32
- *                   example: 10
- *                 totalItems:
- *                   type: integer
- *                   format: int32
- *                   example: 100
- *                 totalPages:
- *                   type: integer
- *                   format: int32
- *                   example: 10
- *                 events:
- *                   type: array
- *                   events:
- *                     type: object
- *                     schema:
- *                       $ref: '#/components/schemas/Event'
- *       400:
- *         description: A client error occurred
- *       500:
- *         description: Server error
- */
-router.get("/get-events/:page/:limit", verifyToken, isAdmin, AdminController.getEventsWithPaging)
-
-/**
- * @swagger
  * /admin/get-event/{event_id}:
  *   get:
  *     summary: Returns adviser data
@@ -434,10 +1017,5 @@ router.get("/get-events/:page/:limit", verifyToken, isAdmin, AdminController.get
  *         description: Server error
  */
 router.get("/get-event/:event_id", verifyToken, isAdmin, AdminController.getEvent)
-
-// router.get("/get-iprs-token", AdminController.testIPRS)
-// router.post("/query-iprs", AdminController.queryIPRS)
-
-router.post("/query-partner-number", AdminController.partnerNoQuery_KE_Person)
 
 export const AdminRoutes = router

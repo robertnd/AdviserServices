@@ -1,7 +1,4 @@
-import { QueryResult } from "pg"
 import pool from "../../../../config/database"
-import { AdviserQuery } from "../interfaces/adviser-query-dto.interface"
-import { fadvisers } from "../../../../_components/fadvisers.dpmock"
 import { RegistrationDto } from "../dto/controllers/request/register.dto"
 import argon2 from "argon2"
 import jwt from "jsonwebtoken"
@@ -9,7 +6,11 @@ import config from "../../../../config"
 import { Result } from "../../../../shared/dto/result"
 import { UtilServices } from "../../../../shared/services/util.services"
 import { AdviserStatus, CredentialStatus, CredentialType, IntermediaryType, LegalEntityType, RBAC } from "../../../../shared/constants"
-import { DataPlatformAdviserDto } from "../dto/data_platform/data-platform.adviser.dto"
+import { CustomError } from "../../../../shared/CustomError"
+
+// ------------------------------------------------------------------------------------------------------------
+// Actions (add, update, delete)
+// ------------------------------------------------------------------------------------------------------------
 
 const createAdviser = async (
     regDto: RegistrationDto,
@@ -33,26 +34,26 @@ const createAdviser = async (
 
         // Skip Adviser creation for staff user
         if (regDto.reg_type == 'staff') {
-
             if ( regDto.adviser_user_id.toLowerCase() == regDto.user_id.toLowerCase()) {
-                return { 
-                    success: false,
-                    errorData: `user_id ( ${regDto.adviser_user_id} ) and adviser_user_id ( ${regDto.adviser_user_id} ) have the same value`
-                }
+                var message = `user_id ( ${regDto.adviser_user_id} ) and adviser_user_id ( ${regDto.adviser_user_id} ) have the same value`
+                throw new CustomError( message, 400, message)
             }
             const searchRes = await AdviserServices.getCredentials(regDto.adviser_user_id)
             if (searchRes.success) {
                 const credential = searchRes.data
                 if ( credential.credential_type !== 'adviser_admin') {
-                    return { 
-                        success: false,
-                        errorData: `${regDto.adviser_user_id}: Not an adviser admin`
-                    }
+                    var message = `${regDto.adviser_user_id}: Not an adviser admin`
+                    throw new CustomError( message, 400, message )
                 }
                 adviser_id = credential.adviser_id
             } else {
                 // user staff creation failed ...
-                return searchRes
+                // 204 will blank the response
+                throw new CustomError( 
+                    searchRes.message || 'Error processing adviser',
+                    searchRes.code == 204 ? 400 : 500,
+                    searchRes.errorData
+                )
             }
         } else {
             var kraPIN, accountNo, partnerNumber, loadDate, country
@@ -146,13 +147,19 @@ const createAdviser = async (
                 ? result4.rows[0]
                 : {}
         }
-        return { success: true, data: created }
+        return { success: true,  code: 200,data: created }
     } catch (err) {
-        // TODO: add logging
         await client.query('ROLLBACK')
-        // console.log(err)
+        var errCode = 500
+        var errorData = err
+        if (err instanceof CustomError) {
+            errCode = err.code
+            if (err.errorData) {
+                errorData = err.errorData
+            }
+        }
         console.log(JSON.stringify(err))
-        return { success: false, errorData: err }
+        return { success: false, code: errCode, errorData }
     } finally {
         client.release()
     }
@@ -160,24 +167,17 @@ const createAdviser = async (
 
 const createAdviserApplicationFile = async (user_id: string, file_desc: string, file_data: string): Promise<Result<any, any>> => {
     try {
-
         const query = `INSERT INTO applicant_filedata ( user_id, file_desc, file_data ) VALUES ( $1, $2, $3) RETURNING *`
         const result = await pool.query(
             query,
             [user_id, file_desc, file_data]
         )
         const created = result.rows[0]
-        return {
-            success: true, data: {
-                user_id, row_id: created.id, file_desc
-            }
+        return { success: true, code: 200, data: { user_id, row_id: created.id, file_desc }
         }
     } catch (err) {
         console.log(JSON.stringify(err))
-        return {
-            success: false,
-            errorData: err
-        }
+        return { success: false, code: 500, errorData: err }
     }
 }
 
@@ -188,39 +188,13 @@ const setPassword = async (user_id: string, password: string): Promise<Result<an
         const result = await pool.query(updateCreds, [digest, user_id])
         const updated = result.rowCount && result.rowCount > 0 ? true : false
         if (updated) {
-            return { success: true, data: result.rowCount }
+            return { success: true, code: 200, data: result.rowCount }
         } else {
-            return { success: false, errorData: `Update failed. No matching records with id ${user_id}` }
+            return { success: false, code: 400, errorData: `Update failed. No matching records with id ${user_id}` }
         }
     } catch (err) {
-        return {
-            success: false,
-            errorData: err
-        }
+        return { success: false, code: 500, errorData: err }
     }
-}
-
-const queryPlatformAdviser = async (query: AdviserQuery): Promise<DataPlatformAdviserDto> => {
-    console.log('Query Obj: ', JSON.stringify(query))
-    const { key } = query
-
-    if (key == 'mobile_no') {
-        const mobile_no = query.value
-        const otp = UtilServices.generateOTP()
-        try {
-            UtilServices.addOTP(otp)
-            const resp = UtilServices.sendSMS(mobile_no, `One-time code: ${otp}`)
-            console.log(JSON.stringify(resp))
-        } catch (err) {
-            console.log(JSON.stringify(err))
-        }
-    }
-
-    var recordNum = Math.floor(Math.random() * 999) + 1
-    var modded = fadvisers[recordNum]
-    modded.intermediary_type = 'Broker'
-    modded.id_type = 'National ID'
-    return modded
 }
 
 const signIn = async (user_id: string, password: string): Promise<Result<any, any>> => {
@@ -267,6 +241,7 @@ const signIn = async (user_id: string, password: string): Promise<Result<any, an
             const token = jwt.sign(payload, JWT_SECRET, jwtOptions)
             return {
                 success: true,
+                code: 200,
                 data: {
                     token,
                     names: user ? `${user.first_name} ${user.last_name}` : adviser.names,
@@ -276,64 +251,28 @@ const signIn = async (user_id: string, password: string): Promise<Result<any, an
         } else {
             // TODO: usecase related stuff here
             // -> loginAttemptLogger( ... )
-            return {
-                success: false,
-                errorData: 'password is invalid'
-            }
+            return { success: false, code: 403, errorData: 'password is invalid' }
         }
     } else {
         // TODO: usecase related stuff here
         // -> loginAttemptLogger( ... )
-        return {
-            success: false,
-            errorData: 'Error computing digest'
-        }
+        return { success: false, code: 500, errorData: 'Error computing digest' }
     }
 }
 
 const getCredentials = async (user_id: string): Promise<Result<any, any>> => {
     const queryResult = await UtilServices.genQuery('credentials', 'user_id', user_id)
-    if (queryResult.success) return { success: true, data: queryResult.data.rows[0] }
-    return {
-        success: false,
-        errorData: queryResult.success == false
-            ? queryResult.errorData || `Unknown error occurred @getCredentials with user_id = ${user_id}`
-            : `Unknown error occurred @getCredentials with user_id = ${user_id}`
-    }
+    return queryResult
 }
 
 const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
     const queryResult = await UtilServices.genQuery('all_advisers', 'user_id', user_id)
-    if (queryResult.success) return { success: true, data: queryResult.data.rows[0] }
-    return {
-        success: false,
-        errorData: queryResult.success == false
-            ? queryResult.errorData || `Unknown error occurred @getAdviser with user_id = ${user_id}`
-            : `Unknown error occurred @getAdviser with user_id = ${user_id}`
-    }
+    return queryResult
 }
 
-const search = async (table: string, column: string, param: string): Promise<Result<any, any>> => {
-    const queryResult = await UtilServices.genQuery(table, column, param)
-    if (queryResult.success) return { success: true, data: queryResult.data.rows[0] }
-    return {
-        success: false,
-        errorData: queryResult.success == false
-            ? queryResult.errorData || `Unknown error occurred @searchAdviser with ${column} = ${param}`
-            : `Unknown error occurred @getAdviser with ${column} = ${param}`
-    }
-}
-
-const getApplication = async (id_type: string, id_number: string): Promise<Result<any, any>> => {
-    try {
-        const query = `SELECT * FROM all_advisers WHERE id_type=$1 AND id_number=$2 AND intermediary_type=$3`
-        const result = await pool.query(
-            query, [id_type, id_number, IntermediaryType.Applicant])
-        if (result.rows.length > 0) return { success: true, data: result }
-        else return { success: false, errorData: `Application with ${id_type} = ${id_number} not found` }
-    } catch (err) {
-        return { success: false, errorData: err }
-    }
+const search = async (table: string, filexp: string, filval: string): Promise<Result<any, any>> => {
+    const queryResult = await UtilServices.genQuery(table, filexp, filval)
+    return queryResult
 }
 
 const checkIfAdviserExists = async (user_id: string): Promise<boolean> => {
@@ -341,50 +280,27 @@ const checkIfAdviserExists = async (user_id: string): Promise<boolean> => {
     return adviser.success
 }
 
-const checkIfApplicationExists = async (id_type: string, id_number: string): Promise<boolean> => {
-    const application = await getApplication(id_type, id_number)
-    return application.success
-}
-
-const checkIfApplicationExistsById = async (applicant_id: number): Promise<boolean> => {
-    const queryResult = await UtilServices.genQuery('applicant', 'id', applicant_id)
-    return queryResult.success
-}
-
 const getProfile = async (user_id: string): Promise<Result<any, any>> => {
     const credentials = await getCredentials(user_id)
     const adviser = await getAdviser(user_id)
     if (credentials.success && adviser.success) {
-        return {
-            success: true,
-            data: {
-                credentials: credentials.data,
-                adviser: adviser.data
-            }
-        }
+        return { success: true, code: 200, data: { credentials: credentials.data, adviser: adviser.data } }
     } else {
         var errors: any = []
         if (credentials.success == false && credentials.errorData) errors.push[credentials.errorData]
         if (adviser.success == false && adviser.errorData) errors.push[adviser.errorData]
-        return {
-            success: false,
-            errorData: errors
-        }
+        return { success: false, code: 500, errorData: errors }
     }
 }
 
 export const AdviserServices = {
     createAdviser,
-    queryPlatformAdviser,
     checkIfAdviserExists,
     signIn,
     setPassword,
     getProfile,
     getCredentials,
     getAdviser,
-    getApplication,
-    checkIfApplicationExists,
     createAdviserApplicationFile,
-    checkIfApplicationExistsById,
     search
 }

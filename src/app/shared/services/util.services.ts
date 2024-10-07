@@ -44,14 +44,22 @@ const storeEvent = async (event: ServiceEvent) => {
     }
 }
 
-const genQuery = async (table_or_view: string, column: string, param: any): Promise<Result<any, any>> => {
+const genQuery = async (table_or_view: string, filexp: string, filval: any): Promise<Result<any, any>> => {
     try {
-        const query = `SELECT * FROM ${table_or_view} WHERE ${column}=$1`
-        const result = await pool.query(query, [param])
-        if (result.rows.length > 0) return { success: true, data: result }
-        else return { success: false, errorData: `Data with ${column} = ${param} not found` }
+        const query = `SELECT * FROM ${table_or_view} WHERE ${filexp}=$1`
+        const result = await pool.query(query, [ filval ])
+        if (result.rows.length > 0) {
+            return { 
+                success: true, 
+                code: 200, 
+                data: result.rows.length > 1 
+                ? result.rows
+                : result.rows[0]
+            }
+        }
+        else return { success: false, code: 204, errorData: `Data with ${filexp} = ${filval} not found` }
     } catch (err) {
-        return { success: false, errorData: err }
+        return { success: false, code: 500, errorData: err }
     }
 }
 
@@ -67,15 +75,9 @@ const sendSMS = async (mobile: string, message: string): Promise<Result<string, 
     try {
         const client = axios.create({ baseURL: SMSAPI })
         const resp = await client.post(SMSAPI, request)
-        return {
-            success: true,
-            data: 'Message queued'
-        }
+        return { success: true, code: 200, data: 'Message queued' }
     } catch (errorData) {
-        return {
-            success: false,
-            errorData
-        }
+        return { success: false, code: 500, errorData }
     }
 }
 
@@ -134,7 +136,7 @@ const iprsQuery = async (identification: string, id_type: string): Promise<Resul
             const { data } = resp.data
             console.log(`@UtilService - Returned Profile: ${JSON.stringify(data)}`)
             return {
-                success: true, data
+                success: true, code: 200, data
             }
         } catch (errorData) {
             console.log(`@UtilService - @iprsQuery - Exception Context Data: ${JSON.stringify(request)}, IPRS_QUERY_API: ${IPRS_QUERY_API}`)
@@ -148,15 +150,10 @@ const iprsQuery = async (identification: string, id_type: string): Promise<Resul
             } else {
                 newError = errorData
             }
-            return {
-                success: false, 
-                errorData: newError
-            }
+            return { success: false, code: 500, errorData: newError }
         }
     }
-    return {
-        success: false, errorData: 'Unknown error'
-    }
+    return { success: false, code: 500, errorData: 'Unknown error' }
 }
 
 const partnerNoQuery = async (request: PartnerNumberRequest): Promise<Result<any, any>> => {
@@ -170,15 +167,13 @@ const partnerNoQuery = async (request: PartnerNumberRequest): Promise<Result<any
             request,
             { headers: { 'Ocp-Apim-Subscription-Key': PM_QUERY_SECRET } })
         const { data } = resp
-        return {
-            success: true, data
-        }
+        return { success: true, code: 200, data }
     } catch (errorData) {
         // console.log(`Exception@partnerNoQuery: ${errorData}`)
         // rewrite 
         const { message, code, status } = errorData as AxiosError
         return {
-            success: false, errorData: { message, code, status }
+            success: false, code: 500, errorData: { message, code, status }
         }
     }
 }

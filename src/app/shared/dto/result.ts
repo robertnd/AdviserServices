@@ -4,10 +4,12 @@ export type Result<T, E> = {
 
 type Success<T> = {
     success: true
+    code: number
     data: T
 }
 
 type Error<E> = {
     success: false
+    code: number
     errorData: E
 }

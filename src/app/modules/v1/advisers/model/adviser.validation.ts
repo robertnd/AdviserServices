@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 // const nonBlank = z.string().transform((t) => t?.trim()).pipe( z.string().min(1, 'Required') )
 const nonBlank = (data: string) => data.trim() !== ''
+const positiveInteger = (value: string) => /^[1-9]\d*$/.test(value)
 
 const migratedAdviser = z.object({
     city: z.string({
@@ -49,9 +50,9 @@ const migratedAdviser = z.object({
         invalid_type_error: "primary_address must be string",
     }).refine(nonBlank, { message: "account_no cannot be blank" }),
     primary_email: z.string({
-        required_error: "primary_email required",
-        invalid_type_error: "primary_email must be string",
-    }).refine(nonBlank, { message: "primary_email cannot be blank" }),
+        required_error: "primary_email is required",
+        invalid_type_error: "primary_email must be string"
+    }).email(),
     mobile_no: z.string({
         required_error: "mobile_no required",
         invalid_type_error: "mobile_no must be string",
@@ -72,7 +73,10 @@ const staff = z.object({
         required_error: "id_type is required",
         invalid_type_error: "id_type must be string",
     }).refine(nonBlank, { message: "id_type cannot be blank" }),
-    primary_email: z.string().email(),
+    primary_email: z.string({
+        required_error: "primary_email is required",
+        invalid_type_error: "primary_email must be string"
+    }).email(),
     mobile_no: z.string({
         required_error: "mobile_no is required",
         invalid_type_error: "mobile_no must be string",
@@ -95,7 +99,7 @@ const staff = z.object({
     }).refine(nonBlank, { message: "gender cannot be blank" })
 })
 
-const signIn =  z.object({
+const signIn = z.object({
     user_id: z.string({
         required_error: "user_id required",
         invalid_type_error: "user_id must be string"
@@ -106,7 +110,7 @@ const signIn =  z.object({
     }).refine(nonBlank, { message: "password cannot be blank" })
 })
 
-const adviserCreateCreds =  z.object({
+const adviserCreateCreds = z.object({
     user_id: z.string({
         required_error: "user_id required",
         invalid_type_error: "user_id must be string"
@@ -119,6 +123,21 @@ const adviserCreateCreds =  z.object({
         required_error: "otp required",
         invalid_type_error: "otp must be string"
     }).refine(nonBlank, { message: "otp cannot be blank" })
+})
+
+const saveFile = z.object({
+    user_id: z.string({
+        required_error: "user_id required",
+        invalid_type_error: "user_id must be string"
+    }).email(),
+    file_desc: z.string({
+        required_error: "file_desc required",
+        invalid_type_error: "file_desc must be string"
+    }).refine(nonBlank, { message: "file_desc cannot be blank" }),
+    file_data: z.string({
+        required_error: "file_data required",
+        invalid_type_error: "file_data must be string"
+    }).refine(nonBlank, { message: "file_data cannot be blank" })
 })
 
 const applicant = z.object({
@@ -148,7 +167,10 @@ const applicant = z.object({
         required_error: "mobile_no is required",
         invalid_type_error: "mobile_no must be string",
     }).refine(nonBlank, { message: "mobile_no cannot be blank" }),
-    primary_email: z.string().email(),
+    primary_email: z.string({
+        required_error: "email is required",
+        invalid_type_error: "email must be string"
+    }).email(),
     country: z.string({
         required_error: "country is required",
         invalid_type_error: "country must be string",
@@ -161,15 +183,88 @@ const applicant = z.object({
         required_error: "city required",
         invalid_type_error: "city must be string",
     }).refine(nonBlank, { message: "city cannot be blank" }),
-    
+
     // legal_entity_type: z.enum(['person', 'non-person']) 
 })
 
-export const AdviserValidationSchemas = { 
+const email = z.object({
+    email: z.string({
+        required_error: "email required",
+        invalid_type_error: "email must be string"
+    }).email()
+})
+
+const user_id = z.object({
+    user_id: z.string({
+        required_error: "user_id required",
+        invalid_type_error: "user_id must be in email format"
+    }).email()
+})
+
+const mobile_no = z.object({
+    mobile_no: z.string({
+        required_error: "mobile_no required",
+        invalid_type_error: "mobile_no must be string"
+    }).regex(/^254(11\d{7}|7[0-3]\d{7}|74[0-8]\d{6}|7[5-9]\d{7})$/, { message: "Format error - Accepted format (12 digit) = [254xxxxxxxxx]" })
+})
+
+const conditionCheck = z.object({
+    filexp: z.string({
+        required_error: "filexp required",
+        invalid_type_error: "filexp must be string"
+    }).regex(/^[a-zA-Z0-9_-]+$/, { message: "filexp is invalid" })
+        .refine(nonBlank, { message: "filexp cannot be blank" }),
+    filval: z.string({
+        required_error: "filval required",
+        invalid_type_error: "filval must be string"
+    }).refine(nonBlank, { message: "filval cannot be blank" })
+})
+
+const pagingCheck = z.object({
+    page: z.string({
+        required_error: "page required",
+        invalid_type_error: "page must be string"
+    }).refine(nonBlank, { message: "page cannot be blank" })
+        .refine(positiveInteger, { message: "page must be positive integer" }),
+    page_size: z.string({
+        required_error: "page_size required",
+        invalid_type_error: "page_size must be string"
+    }).refine(nonBlank, { message: "page_size cannot be blank" })
+        .refine(positiveInteger, { message: "page_size must be positive integer" }),
+})
+
+const conditionAndPagingCheck = z.object({
+    page: z.number({
+        required_error: "page is required",
+        invalid_type_error: "page must be a non-negative number"
+    }).int().nonnegative(),
+    page_size: z.number({
+        required_error: "page_size is required",
+        invalid_type_error: "page_size must be a non-negative number"
+    }).int().nonnegative(),
+    filexp: z.string({
+        required_error: "filexp required",
+        invalid_type_error: "filexp must be string"
+    }).regex(/^[a-zA-Z0-9_-]+$/, { message: "filexp is invalid" })
+        .refine(nonBlank, { message: "filexp cannot be blank" }),
+    filval: z.string({
+        required_error: "filval required",
+        invalid_type_error: "filval must be string"
+    }).refine(nonBlank, { message: "filval cannot be blank" })
+})
+
+export const AdviserValidationSchemas = {
     migratedAdviser,
     applicant,
     staff,
     adviserCreateCreds,
-    signIn
- }
+    signIn,
+    saveFile,
+    email,
+    user_id,
+    mobile_no,
+    conditionCheck,
+    pagingCheck,
+    conditionAndPagingCheck
+}
 
