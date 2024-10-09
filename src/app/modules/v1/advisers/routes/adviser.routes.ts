@@ -77,6 +77,55 @@ router.get("/get-adviser/:user_id", AdviserController.getAdviser)
 
 /**
  * @swagger
+ * /adviser/search-adviser:
+ *   post:
+ *     summary: 
+ *     description: 
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Condition'
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 1
+ *                 page_size:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 total_items:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 100
+ *                 totalPages:
+ *                   type: integer
+ *                   format: int32
+ *                   example: 10
+ *                 events:
+ *                   type: array
+ *                   events:
+ *                     type: object
+ *                     schema:
+ *                       $ref: '#/components/schemas/Adviser'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.post("/search-adviser", AdviserController.searchAdviser)
+
+/**
+ * @swagger
  * /adviser/get-adviser-ext:
  *   post:
  *     summary: Search for Adviser (External System)

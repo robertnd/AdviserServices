@@ -57,7 +57,7 @@ const genQuery = async (table_or_view: string, filexp: string, filval: any): Pro
                 : result.rows[0]
             }
         }
-        else return { success: false, code: 204, errorData: `Data with ${filexp} = ${filval} not found` }
+        else return { success: false, code: 404, errorData: `Data with ${filexp} = ${filval} not found` }
     } catch (err) {
         return { success: false, code: 500, errorData: err }
     }

@@ -158,7 +158,7 @@ const applicant = z.object({
         required_error: "id_number is required",
         invalid_type_error: "id_number must be string",
     }).refine(nonBlank, { message: "id_number cannot be blank" }),
-    id_type: z.enum(['National ID', 'Passport', 'Alien ID', 'Driver License']),
+    id_type: z.enum(['National ID', 'national_id', 'Passport', 'passport_no', 'Alien ID', 'alien_id', 'Driver License']),
     kra_pin: z.string({
         required_error: "kra_pin is required",
         invalid_type_error: "kra_pin must be string",

@@ -9,7 +9,7 @@ import path from 'path'
 import { AdminRoutes } from './app/modules/admin/routes/admin.routes'
 
 const app: express.Application = express()
-app.use(express.json())
+
 // import helmet from "helmet"
 // app.use(helmet()) header
 app.use(cors())
@@ -20,6 +20,16 @@ app.use(cors())
 //         winston.format.json()
 //     )
 // }))
+
+// Large uploads enablement
+// app.use(express.text({ limit: "50mb" }))
+app.use(express.json({ limit: "50mb" }))
+app.use(
+  express.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 })
+)
+app.use(express.json())
+// app.use(express.text())
+
 app.use(expressWinston.errorLogger({
     transports: [new winston.transports.Console()],
     format: winston.format.combine(

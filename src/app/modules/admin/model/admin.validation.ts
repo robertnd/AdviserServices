@@ -108,6 +108,13 @@ const conditionAndPagingCheck = z.object({
     }).refine(nonBlank, { message: "filval cannot be blank" })
 })
 
+const intParam = z.object({
+    param: z.string({
+        required_error: "required"
+    }).refine(nonBlank, { message: "cannot be blank" })
+        .refine(positiveInteger, { message: "must be positive integer" })
+})
+
 export const AdminValidationSchemas = {
     rootSignIn,
     adminSignIn,
@@ -116,5 +123,6 @@ export const AdminValidationSchemas = {
     dpAdviserStatusUpdate,
     conditionCheck,
     pagingCheck,
-    conditionAndPagingCheck
+    conditionAndPagingCheck,
+    intParam
 }

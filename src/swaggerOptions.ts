@@ -176,6 +176,18 @@ const swaggerOptions: Options = {
                         status: { type: 'string' },
                     }
                 },
+                FileEntry: {
+                    type: 'object',
+                    required: [
+                        'id', 'user_id', 'file_desc', 'create_date'
+                    ],
+                    properties: {
+                        id: { type: 'number' },
+                        user_id: { type: 'string' },
+                        file_desc: { type: 'string' },
+                        create_date: { type: 'string' }
+                    }
+                },
                 FullEvent: {
                     type: 'object',
                     required: [

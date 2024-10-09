@@ -198,6 +198,23 @@ const updateAdviserStatus = async (req: express.Request<{}, {}, UpdateDto<any>>,
 // Data Extraction - Lists
 // ------------------------------------------------------------------------------------------------------------
 // Special case of getAdvisers (AdviserStatus.Pending_Approval)
+
+const getApplicantFiles = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { user_id } = req.params
+    const validationResult = AdviserValidationSchemas.user_id.safeParse({ user_id })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+        return
+    }
+    const result = await AdminServices.getApplicantFiles(user_id)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result.data })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Request failed', errorData: result.errorData })
+    }
+}
+
 const getNewApplicantsWithPaging = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
     const { page, page_size } = req.params
 
@@ -536,6 +553,37 @@ const getIPRSToken = async (req: express.Request, res: express.Response) => {
     res.status(200).send(fres)
 }
 
+const getFile = async (req: express.Request, res: express.Response) => {
+
+    const { file_id } = req.params
+    let param = file_id
+    const validationResult = AdminValidationSchemas.intParam.safeParse({ param })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
+    }
+    const result = await AdminServices.getFile(parseInt(param))
+    if ( result.success ) {
+        res.status(200).send({ status: 'success', message: 'Validation failed', data: result.data })
+    } else {
+        res.status(result.code).send({ 
+            status: 'error', 
+            message: result.message || 'Failed', 
+            errorData: result.errorData })
+    }
+}
+
+const queryIPRS_SIM = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
+    const data = okIprsQuery()
+    const errorData = failedIprsData()
+    res.status(200).send({ status: 'success', data })
+    // res.status(500).send({
+    //     status: 'error',
+    //     message: '@Controller (Mock) - @queryIPRS/else - An error occurred',
+    //     errorData
+    // })
+}
+
 const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express.Response<ApiResponse<any, any>>) => {
     const { identification, id_type } = req.body
     var err
@@ -554,7 +602,19 @@ const queryIPRS = async (req: express.Request<{}, {}, IPRSRequest>, res: express
     }
 }
 
-const partnerNoQuery_KE_Person = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
+// TODO - Simulation
+const assignPartnerNumber_KE_SIM = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
+    res.status(200).send({
+        status: 'success',
+        data: {
+            Code: 200,
+            Status: 'success',
+            partnerNumber: '1001171133'
+        }
+    })
+}
+
+const assignPartnerNumber_KE = async (req: express.Request<{}, {}, PartnerNumberRequest>, res: express.Response<ApiResponse<any, any>>) => {
     var txRequest = {
         country_id: 1,
         sourceid: 117640,
@@ -653,6 +713,7 @@ export const AdminController = {
     updateAdminStatus,
     updateAdviserStatus,
 
+    getApplicantFiles,
     getNewApplicantsWithPaging,
     getNewApplicants,
     getAdvisersWithPaging,
@@ -670,10 +731,11 @@ export const AdminController = {
     getAdminsWithPaging,
     getAdmins,
 
-    partnerNoQuery_KE_Person,
+    assignPartnerNumber_KE,
 
     getAdviser,
     getEvent,
+    getFile,
 
     getIPRSToken,
     queryIPRS

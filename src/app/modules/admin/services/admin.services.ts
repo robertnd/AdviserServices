@@ -21,7 +21,7 @@ const rootSignIn = async (secret: string): Promise<Result<string, any>> => {
         const EXPIRES = config.jwt_validity
         const jwtOptions = { issuer: `${config.jwt_issuer}`, subject: 'root', expiresIn: EXPIRES, }
         const token = jwt.sign({ id: 'root', role: 'root' }, JWT_SECRET, jwtOptions)
-        return { success: true, code:200, data: token }
+        return { success: true, code: 200, data: token }
     }
 }
 
@@ -40,7 +40,7 @@ const adminSignIn = async (user_id: string, password: string): Promise<Result<an
             }
             // admin => OM admin, adviser-admin => Local Adviser Admin, adviser-user
             const token = jwt.sign({ id: user_id, role: 'admin' }, JWT_SECRET, jwtOptions)
-            return { success: true, code:200, data: token }
+            return { success: true, code: 200, data: token }
         } else {
             return { success: false, code: 403, errorData: 'password is invalid' }
         }
@@ -56,8 +56,8 @@ const createAdmin = async (adminDto: AdminDto): Promise<Result<any, any>> => {
                                  VALUES ( $1, $2, $3, $4) RETURNING *`
         await pool.query(insertAdviser, [adminDto.user_id, adminDto.email, adminDto.mobile_no, digest])
         return {
-            success: true, 
-            code:200, 
+            success: true,
+            code: 200,
             data: { user_id: adminDto.user_id, email: adminDto.email, mobile_no: adminDto.mobile_no }
         }
     } catch (err) {
@@ -73,17 +73,17 @@ const checkIfAdminExists = async (user_id: string): Promise<boolean> => {
 const updateAdminStatus = async (user_id: string, status: string): Promise<Result<any, any>> => {
     try {
         const updateCreds = `UPDATE admins SET status=$1 WHERE user_id=$2 RETURNING *`
-        const result = await pool.query(updateCreds, [ status, user_id ])
-        if ( result && result.rowCount && result.rowCount > 0) {
-            return { success: true, code:200, data: result.rows[0] }
+        const result = await pool.query(updateCreds, [status, user_id])
+        if (result && result.rowCount && result.rowCount > 0) {
+            return { success: true, code: 200, data: result.rows[0] }
         } else {
             var message = `No records with user_id = ${user_id} found`
-            throw new CustomError(message, 400, message )
+            throw new CustomError(message, 400, message)
         }
     } catch (err) {
         var errorData = err
         var code = 500
-        if ( err instanceof CustomError) {
+        if (err instanceof CustomError) {
             errorData = err.errorData
             code = err.code
         }
@@ -96,11 +96,11 @@ const updateAdviserStatus = async (user_id: string, status: string): Promise<Res
         const updateCreds = `UPDATE credentials SET status=$1 WHERE user_id=$2 RETURNING *`
         const result = await pool.query(updateCreds, [status, user_id])
         // const created = result.rows[0]
-        if ( result && result.rowCount && result.rowCount > 0) {
-            return { success: true, code:200, data: result.rows[0] }
+        if (result && result.rowCount && result.rowCount > 0) {
+            return { success: true, code: 200, data: result.rows[0] }
         } else {
             var message = `No records with user_id = ${user_id} found`
-            throw new CustomError(message, 400, message )
+            throw new CustomError(message, 400, message)
         }
     } catch (err) {
         return { success: false, code: 500, errorData: err }
@@ -110,12 +110,32 @@ const updateAdviserStatus = async (user_id: string, status: string): Promise<Res
 // ------------------------------------------------------------------------------------------------------------
 // Data Extraction - Lists
 // ------------------------------------------------------------------------------------------------------------
+
+const getApplicantFiles = async (user_id: string): Promise<Result<any, any>> => {
+    var code = 500, errorData
+    try {
+        const query = `SELECT id, user_id, file_desc, create_date FROM applicant_filedata WHERE user_id=$1`
+        const result = await pool.query(query, [user_id])
+        if (result && result.rowCount && result.rowCount > 0) {
+            return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
+        } else {
+            code = 400
+            errorData = `No records with user_id =${user_id} found`
+        }
+    } catch (err) {
+        errorData = err
+    }
+    return {
+        success: false, code, errorData
+    }
+}
+
 const getAdvisersWithConditionAndPaging = async (
-    vPage: number, 
-    pageSize: number, 
+    vPage: number,
+    pageSize: number,
     filexp: string,
     filval: string,
-    ): Promise<Result<any, any>> => {
+): Promise<Result<any, any>> => {
 
     const page = vPage || 1;
     const page_size = pageSize
@@ -123,15 +143,15 @@ const getAdvisersWithConditionAndPaging = async (
     var code, errorData
     try {
         const queryAdvisers = `SELECT * FROM all_advisers WHERE ${filexp}=$1 LIMIT $2 OFFSET $3`
-        const result = await pool.query(queryAdvisers, [ filval, page_size, offset ])
-        if ( result && result.rowCount && result.rowCount > 0) {
+        const result = await pool.query(queryAdvisers, [filval, page_size, offset])
+        if (result && result.rowCount && result.rowCount > 0) {
             return {
                 success: true,
-                code:200, 
+                code: 200,
                 data: { page, page_size, total_items: result.rowCount, advisers: result.rows }
             }
         } else {
-            code = 204
+            code = 400
             errorData = `No records with ${filexp}=${filval} found`
         }
     } catch (err) {
@@ -144,11 +164,11 @@ const getAdvisersWithConditionAndPaging = async (
 }
 
 const getAdvisersWithNotConditionAndPaging = async (
-    vPage: number, 
-    pageSize: number, 
+    vPage: number,
+    pageSize: number,
     filexp: string,
     filval: string,
-    ): Promise<Result<any, any>> => {
+): Promise<Result<any, any>> => {
 
     const page = vPage || 1;
     const page_size = pageSize
@@ -156,15 +176,15 @@ const getAdvisersWithNotConditionAndPaging = async (
     var code, errorData
     try {
         const queryAdvisers = `SELECT * FROM all_advisers WHERE ${filexp}!=$1 LIMIT $2 OFFSET $3`
-        const result = await pool.query(queryAdvisers, [ filval, page_size, offset ])
-        if ( result && result.rowCount && result.rowCount > 0) {
+        const result = await pool.query(queryAdvisers, [filval, page_size, offset])
+        if (result && result.rowCount && result.rowCount > 0) {
             return {
                 success: true,
-                code:200, 
+                code: 200,
                 data: { page, page_size, total_items: result.rowCount, advisers: result.rows }
             }
         } else {
-            code = 204
+            code = 404
             errorData = `No records with ${filexp}=${filval} found`
         }
     } catch (err) {
@@ -176,20 +196,20 @@ const getAdvisersWithNotConditionAndPaging = async (
     }
 }
 
-const getAdvisersWithCondition = async ( filexp: string, filval: string, ): Promise<Result<any, any>> => {
+const getAdvisersWithCondition = async (filexp: string, filval: string,): Promise<Result<any, any>> => {
     try {
         const queryAdvisers = `SELECT * FROM all_advisers WHERE ${filexp}=$1`
-        const result = await pool.query(queryAdvisers, [ filval ])
+        const result = await pool.query(queryAdvisers, [filval])
         return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
     } catch (err) {
         return { success: false, code: 500, errorData: err }
     }
 }
 
-const getAdvisersWithNotCondition = async ( filexp: string, filval: string, ): Promise<Result<any, any>> => {
+const getAdvisersWithNotCondition = async (filexp: string, filval: string,): Promise<Result<any, any>> => {
     try {
         const queryAdvisers = `SELECT * FROM all_advisers WHERE ${filexp}!=$1`
-        const result = await pool.query(queryAdvisers, [ filval ])
+        const result = await pool.query(queryAdvisers, [filval])
         return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
     } catch (err) {
         return { success: false, code: 500, errorData: err }
@@ -207,7 +227,7 @@ const getAdvisersWithPaging = async (vPage: number, pageSize: number): Promise<R
         const result: QueryResult<any> = await pool.query(queryAdvisers, [page_size, offset])
         return {
             success: true,
-            code:200, 
+            code: 200,
             data: {
                 page,
                 page_size,
@@ -218,7 +238,7 @@ const getAdvisersWithPaging = async (vPage: number, pageSize: number): Promise<R
     } catch (err) {
         return {
             success: false,
-            code: 500, 
+            code: 500,
             errorData: err
         }
     }
@@ -240,10 +260,10 @@ const getEventsWithConditionAndPaging = async (vPage: number, pageSize: number, 
     const offset = (page - 1) * page_size;
     try {
         const queryEvents = `SELECT * FROM event WHERE ${filexp}=$1 LIMIT $2 OFFSET $3`
-        const result = await pool.query(queryEvents, [ filval, page_size, offset ])
+        const result = await pool.query(queryEvents, [filval, page_size, offset])
         return {
             success: true,
-            code: 200, 
+            code: 200,
             data: { page, page_size, total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
@@ -254,8 +274,9 @@ const getEventsWithConditionAndPaging = async (vPage: number, pageSize: number, 
 const getEventsWithCondition = async (filexp: string, filval: string): Promise<Result<any, any>> => {
     try {
         const queryEvents = `SELECT * FROM event WHERE ${filexp}=$1`
-        const result = await pool.query(queryEvents, [ filval ])
-        return { success: true, code: 200, data: { total_items: result.rowCount, events: result.rows }
+        const result = await pool.query(queryEvents, [filval])
+        return {
+            success: true, code: 200, data: { total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
         return { success: false, code: 500, errorData: err }
@@ -268,10 +289,10 @@ const getEventsWithPaging = async (vPage: number, pageSize: number): Promise<Res
     const offset = (page - 1) * page_size;
     try {
         const queryEvents = `SELECT * FROM event LIMIT $1 OFFSET $2`
-        const result: QueryResult<any> = await pool.query(queryEvents, [ page_size, offset ])
+        const result: QueryResult<any> = await pool.query(queryEvents, [page_size, offset])
         return {
             success: true,
-            code: 200, 
+            code: 200,
             data: { page, page_size, total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
@@ -285,7 +306,7 @@ const getEvents = async (): Promise<Result<any, any>> => {
         const result: QueryResult<any> = await pool.query(queryEvents)
         return {
             success: true,
-            code: 200, 
+            code: 200,
             data: { total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
@@ -294,9 +315,9 @@ const getEvents = async (): Promise<Result<any, any>> => {
 }
 
 const getAdminsWithConditionAndPaging = async (
-    vPage: number, 
-    pageSize: number, 
-    filexp: string, 
+    vPage: number,
+    pageSize: number,
+    filexp: string,
     filval: string): Promise<Result<any, any>> => {
 
     const page = vPage || 1;
@@ -304,16 +325,16 @@ const getAdminsWithConditionAndPaging = async (
     const offset = (page - 1) * page_size;
     try {
         const queryAdmins = `SELECT id, user_id, email, status, create_date FROM admins WHERE ${filexp}=$1 LIMIT $2 OFFSET $3`
-        const result = await pool.query(queryAdmins, [ filval, page_size, offset ])
-        if ( result && result.rowCount && result.rowCount > 0 ) {
+        const result = await pool.query(queryAdmins, [filval, page_size, offset])
+        if (result && result.rowCount && result.rowCount > 0) {
             return {
                 success: true,
-                code: 200, 
+                code: 200,
                 data: { page, page_size, total_items: result.rowCount, admins: result.rows }
             }
         } else {
             var message = `No records with ${filexp} = ${filval} was found`
-            throw new CustomError( message, 400, message )
+            throw new CustomError(message, 400, message)
         }
     } catch (err) {
         var errorData = err
@@ -329,12 +350,12 @@ const getAdminsWithConditionAndPaging = async (
 const getAdminsWithCondition = async (filexp: string, filval: string): Promise<Result<any, any>> => {
     try {
         const queryAdmins = `SELECT id, user_id, email, status, create_date FROM admins WHERE ${filexp}=$1`
-        const result = await pool.query(queryAdmins, [ filval ])
-        if ( result && result.rowCount && result.rowCount > 0 ) {
+        const result = await pool.query(queryAdmins, [filval])
+        if (result && result.rowCount && result.rowCount > 0) {
             return { success: true, code: 200, data: { total_items: result.rowCount, admins: result.rows } }
         } else {
             var message = `No records with ${filexp} = ${filval} was found`
-            throw new CustomError( message, 400, message )
+            throw new CustomError(message, 400, message)
         }
     } catch (err) {
         var errorData = err
@@ -356,7 +377,7 @@ const getAdminsWithPaging = async (vPage: number, pageSize: number): Promise<Res
         const result = await pool.query(queryAdmins, [page_size, offset])
         return {
             success: true,
-            code: 200, 
+            code: 200,
             data: { page, page_size, total_items: result.rowCount, admins: result.rows }
         }
     } catch (err) {
@@ -370,7 +391,7 @@ const getAdmins = async (): Promise<Result<any, any>> => {
         const result = await pool.query(queryAdmins)
         return {
             success: true,
-            code: 200, 
+            code: 200,
             data: { total_items: result.rowCount, admins: result.rows }
         }
     } catch (err) {
@@ -382,6 +403,23 @@ const getAdmins = async (): Promise<Result<any, any>> => {
 // Data Extraction - Entities
 // ------------------------------------------------------------------------------------------------------------
 
+const getFile = async (file_id: number): Promise<Result<any, any>> => {
+    var code = 500, errorData
+    try {
+        const query = `SELECT file_data FROM applicant_filedata WHERE id=$1`
+        const result = await pool.query(query, [ file_id ])
+        if (result && result.rowCount && result.rowCount > 0) {
+            return { success: true, code: 200, data: result.rows[0] }
+        } else {
+            code = 400
+            errorData = `No file with id =${file_id} found`
+        }
+    } catch (err) {
+        errorData = err
+    }
+    return { success: false, code, errorData }
+}
+
 const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
 
     AdviserServices.search
@@ -392,13 +430,13 @@ const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
         if (result.rows.length > 0) {
             return {
                 success: true,
-                code: 200, 
+                code: 200,
                 data: result.rows[0]
             }
         } else {
             return {
                 success: false,
-                code: 204,
+                code: 404,
                 errorData: `Adviser with user-id: ${user_id} not found`
             }
         }
@@ -418,7 +456,7 @@ const getEvent = async (event_id: number): Promise<Result<any, any>> => {
         if (result.rows.length > 0) {
             return { success: true, code: 200, data: result.rows[0] }
         } else {
-            return { success: false, code: 204, errorData: `Event with id: ${event_id} not found` }
+            return { success: false, code: 404, errorData: `Event with id: ${event_id} not found` }
         }
     } catch (err) {
         return { success: false, code: 500, errorData: err }
@@ -439,6 +477,7 @@ export const AdminServices = {
     updateAdminStatus,
     updateAdviserStatus,
 
+    getApplicantFiles,
     getAdvisersWithConditionAndPaging,
     getAdvisersWithNotConditionAndPaging,
     getAdvisersWithCondition,
@@ -454,6 +493,7 @@ export const AdminServices = {
     getAdminsWithPaging,
     getAdmins,
 
+    getFile,
     getAdviser,
     getEvent,
     getAdminCredentials

@@ -183,6 +183,40 @@ router.post("/update-adviser-status", verifyToken, isAdmin, AdminController.upda
 
 /**
  * @swagger
+ * /admin/get-applicant-files/{user_id}:
+ *   get:
+ *     summary: Returns files uploaded by applicant
+ *     description: Returns files uploaded by applicant
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: user_id
+ *         in: path
+ *         description: user_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 advisers:
+ *                   type: object
+ *                   schema:
+ *                     $ref: '#/components/schemas/FileEntry'
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-applicant-files/:user_id", verifyToken, isAdmin, AdminController.getApplicantFiles)
+
+/**
+ * @swagger
  * /admin/get-new-applicants-with-paging/{page}/{page_size}:
  *   get:
  *     summary: Returns a paged list of new applicants (status = Pending_Approval)
@@ -946,8 +980,7 @@ router.get("/get-admins-with-paging/:page/:page_size", verifyToken, isAdmin, Adm
  */
 router.get("/get-admins", verifyToken, isAdmin, AdminController.getAdmins)
 
-
-router.post("/query-iprs", verifyToken, isAdmin, AdminController.queryIPRS)
+router.post("/query-iprs", AdminController.queryIPRS)
 router.post("/get-iprs-token", verifyToken, isAdmin, AdminController.getIPRSToken)
 
 /**
@@ -1017,5 +1050,34 @@ router.get("/get-adviser/:user_id", verifyToken, isAdmin, AdminController.getAdv
  *         description: Server error
  */
 router.get("/get-event/:event_id", verifyToken, isAdmin, AdminController.getEvent)
+
+/**
+ * @swagger
+ * /admin/get-file/{file_id}:
+ *   get:
+ *     summary: Returns file data encoded in Base 64
+ *     description: Returns file data encoded in Base 64
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: file_id
+ *         in: path
+ *         description: user_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/text:
+ *       400:
+ *         description: A client error occurred
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-file/:file_id", verifyToken, isAdmin, AdminController.getFile)
+
+router.post("/assign-partner-number", AdminController.assignPartnerNumber_KE)
 
 export const AdminRoutes = router

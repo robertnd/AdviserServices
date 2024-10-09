@@ -74,6 +74,7 @@ const newAdviserApplication = async (req: express.Request, res: express.Response
         return
     }
     const adviser = req.body
+    const { entity_kind } = adviser
     var password = ''
     if (typeof adviser === 'object' && 'password' in adviser) {
         password = adviser.password
@@ -94,7 +95,7 @@ const newAdviserApplication = async (req: express.Request, res: express.Response
     } else {
         const createResult = await AdviserServices.createAdviser(
             regDto,
-            AdviserStatus.Pending_Approval,
+            entity_kind == 'IPRS' ? AdviserStatus.Approved : AdviserStatus.Pending_Approval,
             LegalEntityType.person,
             IntermediaryType.Applicant,
             CredentialType.adviser_applicant,
@@ -204,6 +205,22 @@ const getAdviser = async (req: express.Request, res: express.Response<ApiRespons
         return
     }
     const result = await AdviserServices.getAdviser(user_id)
+    if (result.success) {
+        res.status(200).send({ status: 'success', data: result.data })
+    } else {
+        res.status(result.code).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+    }
+}
+
+const searchAdviser = async (req: express.Request, res: express.Response<ApiResponse<any, any>>) => {
+    const { filexp, filval } = req.body
+    const validationResult = AdviserValidationSchemas.conditionCheck.safeParse({ filexp, filval })
+    if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
+        const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        res.status(400).send({ status: 'error', message: 'Invalid parameters', errorData: errorLists })
+        return
+    }
+    const result = await UtilServices.genQuery('all_advisers', filexp, filval)
     if (result.success) {
         res.status(200).send({ status: 'success', data: result.data })
     } else {
@@ -321,6 +338,7 @@ export const AdviserController = {
     newStaffUser,
     signIn,
     getAdviser,
+    searchAdviser,
     getAdviserExternal,
     saveFile,
     createOTP,

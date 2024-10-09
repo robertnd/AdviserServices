@@ -51,7 +51,7 @@ const createAdviser = async (
                 // 204 will blank the response
                 throw new CustomError( 
                     searchRes.message || 'Error processing adviser',
-                    searchRes.code == 204 ? 400 : 500,
+                    searchRes.code == 204 ? 404 : 500,
                     searchRes.errorData
                 )
             }
