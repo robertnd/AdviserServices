@@ -70,6 +70,129 @@ const checkIfAdminExists = async (user_id: string): Promise<boolean> => {
     return queryResult.success
 }
 
+const generateVerificationCode = async (): Promise<string> => {
+    return randomBytes(32).toString("hex");
+  };
+  
+  const saveVerificationCode = async (
+    user_id: string,
+    verificationCode: string
+  ) => {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+    const query = `
+        UPDATE admins 
+        SET verification_code = $1, 
+            verification_code_expires_at = $2,
+            is_verified = FALSE
+        WHERE user_id = $3
+        RETURNING *
+      `;
+    try {
+      const result = await pool.query(query, [
+        verificationCode,
+        expiresAt.toISOString(),
+        user_id,
+      ]);
+      if (result.rows.length > 0) {
+        return { success: true };
+      } else {
+        return {
+          success: false,
+          errorData: `Admin with user_id: ${user_id} not found`,
+        };
+      }
+    } catch (error: any) {
+      console.error("Error saving verification code:", error);
+      return {
+        success: false,
+        errorData: error.message || "Unknown error occurred",
+      };
+    }
+  };
+  const setAdminPassword = async (
+    user_id: string,
+    password: string,
+    code: string
+  ) => {
+    try {
+      const checkQuery = `
+          SELECT verification_code, verification_code_expires_at
+          FROM admins
+          WHERE user_id = $1 AND verification_code = $2
+        `;
+      const checkResult = await pool.query(checkQuery, [user_id, code]);
+  
+      if (checkResult.rows.length === 0) {
+        return {
+          success: false,
+          message: "Invalid or expired verification code",
+        };
+      }
+  
+      const admin = checkResult.rows[0];
+  
+      const now = new Date();
+      if (new Date(admin.verification_code_expires_at) < now) {
+        return { success: false, message: "Verification code has expired" };
+      }
+  
+      const digest = await argon2.hash(password);
+  
+      const updateQuery = `
+          UPDATE admins 
+          SET digest = $1, 
+              is_verified = TRUE, 
+              verification_code = NULL,
+              verification_code_expires_at = NULL
+          WHERE user_id = $2
+          RETURNING *
+        `;
+      const updateResult = await pool.query(updateQuery, [digest, user_id]);
+  
+      if (updateResult.rows.length > 0) {
+        return { success: true, message: "Password has been set successfully" };
+      } else {
+        return { success: false, message: "Failed to set password" };
+      }
+    } catch (error) {
+      console.error("Error setting admin password:", error);
+      return {
+        success: false,
+        message: "An error occurred while setting the password",
+      };
+    }
+  };
+  const checkAdminByCode = async (
+    verificationCode: string
+  ): Promise<Result<any, any>> => {
+    try {
+      const queryAdmin = `
+          SELECT * FROM admins 
+          WHERE verification_code = $1 
+          AND verification_code_expires_at > NOW()
+        `;
+      const result = await pool.query(queryAdmin, [verificationCode]);
+  
+      if (result.rows.length > 0) {
+        return {
+          success: true,
+          data: result.rows[0], // Admin found with the given verification code
+        };
+      } else {
+        return {
+          success: false,
+          errorData: "Verification code not found or expired",
+        };
+      }
+    } catch (err) {
+      return {
+        success: false,
+        errorData: err,
+      };
+    }
+  };
+
 const updateAdminStatus = async (user_id: string, status: string): Promise<Result<any, any>> => {
     try {
         const updateCreds = `UPDATE admins SET status=$1 WHERE user_id=$2 RETURNING *`
@@ -476,6 +599,10 @@ export const AdminServices = {
     createAdmin,
     updateAdminStatus,
     updateAdviserStatus,
+    generateVerificationCode,
+    saveVerificationCode,
+    setAdminPassword,
+    checkAdminByCode,
 
     getApplicantFiles,
     getAdvisersWithConditionAndPaging,

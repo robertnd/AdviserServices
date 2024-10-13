@@ -14,6 +14,7 @@ import { PartnerNumberRequest } from '../../../shared/dto/external/partner_mgmt/
 import { failedIprsData, okIprsQuery } from '../../../shared/dto/mocks/mock.data'
 import { AdviserStatus } from '../../../shared/constants'
 import { AdviserValidationSchemas } from '../../v1/advisers/model/adviser.validation'
+import { sendEmail } from '../services/admin.emails'
 
 // : Promise<void>
 const log: debug.IDebugger = debug('app:advisers-controller')
@@ -142,6 +143,133 @@ const createAdmin = async (req: express.Request<{}, {}, AdminDto>, res: express.
         return
     }
 }
+
+const inviteAdmin = async (
+    req: express.Request,
+    res: express.Response<ApiResponse<any, any>>
+  ) => {
+    try {
+      const { user_id, email } = req.body;
+      const validationResult = AdminValidationSchemas.inviteAdmin.safeParse({
+        user_id,
+        email,
+      });
+      if (
+        typeof validationResult.error !== "undefined" &&
+        validationResult.error.name === "ZodError"
+      ) {
+        const errorLists = validationResult.error.issues.map(
+          (err: ZodIssue) => err.message
+        );
+        const storeEvent = {
+          user_id,
+          event_type: "admin invitation",
+          endpoint: "/admin-invite",
+          direction: "in",
+          process: "adminInvite",
+          status: "error",
+          result: JSON.stringify(errorLists),
+        };
+        var eResult = UtilServices.storeEvent(storeEvent);
+        res.status(400).send({
+          status: "error",
+          message: "Admin invitation failed",
+          errorData: errorLists,
+        });
+        return;
+      }
+      if (validationResult.success) {
+        const result = await AdminServices.checkIfAdminExists(user_id);
+        if (result.success) {
+          const code = await AdminServices.generateVerificationCode();
+          const saveResult = await AdminServices.saveVerificationCode(
+            user_id,
+            code
+          );
+          if (saveResult.success) {
+            const setPasswordLink = `${config.client_url}/set-password/${code}`;
+            await sendEmail(email, setPasswordLink);
+            res.status(200).json({ status: "success", data: "Invitation sent." });
+          } else {
+            res.status(400).json({
+              status: "error",
+              message: "Failed to save verification code.",
+              errorData: saveResult.errorData,
+            });
+          }
+        } else {
+          res.status(400).json({
+            status: "error",
+            message: "Admin invitation failed",
+            errorData: result.errorData,
+          });
+        }
+      }
+    } catch (error) {
+      res.status(500).send({
+        status: "error",
+        message: "Error occurred",
+        errorData: error,
+      });
+      return;
+    }
+  };
+  
+  const setAdminPassword = async (
+    req: express.Request,
+    res: express.Response<ApiResponse<any, any>>
+  ) => {
+    const { code, password, email } = req.body;
+    const validationResult = AdminValidationSchemas.setAdminPassword.safeParse({
+      code,
+      password,
+      email,
+    });
+    if (
+      typeof validationResult.error !== "undefined" &&
+      validationResult.error.name === "ZodError"
+    ) {
+      const errorLists = validationResult.error.issues.map(
+        (err: ZodIssue) => err.message
+      );
+      res.status(400).send({
+        status: "error",
+        message: "Admin set password failed",
+        errorData: errorLists,
+      });
+      return;
+    }
+    if (validationResult.success) {
+      let result = await AdminServices.checkAdminByCode(code);
+      if (result.success) {
+        let user_id = result.data.user_id;
+        let updateResult = await AdminServices.setAdminPassword(
+          user_id,
+          password,
+          code
+        );
+  
+        if (updateResult.success) {
+          res.status(200).send({
+            status: "success",
+            data: updateResult.message,
+          });
+        } else {
+          res.status(400).send({
+            status: "error",
+            message: "Failed to set password",
+            errorData: updateResult.message,
+          });
+        }
+      } else {
+        res.status(400).send({
+          status: "error",
+          message: "Invalid verification code",
+          errorData: result.errorData,
+        });
+      }
+    }
+  };
 
 const updateAdminStatus = async (req: express.Request<{}, {}, UpdateDto<any>>, res: express.Response<ApiResponse<any, any>>) => {
     const { user_id, status } = req.body
@@ -710,6 +838,8 @@ export const AdminController = {
     adminSignIn,
 
     createAdmin,
+    inviteAdmin,
+    setAdminPassword,
     updateAdminStatus,
     updateAdviserStatus,
 
