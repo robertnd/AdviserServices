@@ -53,9 +53,9 @@ const adminSignIn = async (user_id: string, password: string): Promise<Result<an
 const createAdmin = async (adminDto: AdminDto): Promise<Result<any, any>> => {
     try {
         const digest = await argon2.hash(adminDto.password)
-        const insertAdviser = `INSERT INTO admins (user_id, email, mobile_no, digest)
-                                 VALUES ( $1, $2, $3, $4) RETURNING *`
-        await pool.query(insertAdviser, [adminDto.user_id, adminDto.email, adminDto.mobile_no, digest])
+        const insertAdviser = `INSERT INTO admins (user_id, email, mobile_no, digest, status)
+                                 VALUES ( $1, $2, $3, $4, $5) RETURNING *`
+        await pool.query(insertAdviser, [adminDto.user_id, adminDto.email, adminDto.mobile_no, digest, "Pending"])
         return {
             success: true,
             code: 200,

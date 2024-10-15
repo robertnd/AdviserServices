@@ -187,8 +187,7 @@ const inviteAdmin = async (
         });
       }
   
-      const result = await AdminServices.createAdmin(req.body);
-      console.log("Result in inviteAdmin:", result);
+      const result = await AdminServices.createAdmin({...req.body, status: "Pending"});
       if (!result.success) {
         return res.status(400).send({
           status: "error",
@@ -199,7 +198,6 @@ const inviteAdmin = async (
   
       const code = await AdminServices.generateVerificationCode();
       const saveResult = await AdminServices.saveVerificationCode(email, code);
-  
       if (saveResult.success) {
         const setPasswordLink = `${config.client_url}/set-password/${code}`;
         await sendEmail(email, setPasswordLink);

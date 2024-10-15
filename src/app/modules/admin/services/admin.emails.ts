@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
     pass: config.gmail_app_password,
   },
 });
-
+// TODO: make this reusable for other emails
 export const sendEmail = async (
   to: string,
   setPasswordLink: string
