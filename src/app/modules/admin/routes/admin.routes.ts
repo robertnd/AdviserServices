@@ -145,7 +145,7 @@ router.post("/create-admin", AdminController.createAdmin)
  *
  */
 
-router.post("/admin-invite", verifyToken, isRoot, AdminController.inviteAdmin);
+router.post("/invite-admin", verifyToken, isRoot, AdminController.inviteAdmin);
 router.post("/set-admin-password", AdminController.setAdminPassword);
 
 /**

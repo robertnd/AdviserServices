@@ -8,6 +8,7 @@ import { AdminDto } from "../dto/controllers/admin.dto"
 import { UtilServices } from "../../../shared/services/util.services"
 import { AdviserServices } from "../../v1/advisers/services/adviser.services"
 import { CustomError } from "../../../shared/CustomError"
+import { randomBytes } from "crypto";
 
 
 // ------------------------------------------------------------------------------------------------------------
@@ -163,6 +164,8 @@ const generateVerificationCode = async (): Promise<string> => {
       };
     }
   };
+
+  
   const checkAdminByCode = async (
     verificationCode: string
   ): Promise<Result<any, any>> => {
@@ -173,21 +176,25 @@ const generateVerificationCode = async (): Promise<string> => {
           AND verification_code_expires_at > NOW()
         `;
       const result = await pool.query(queryAdmin, [verificationCode]);
-  
       if (result.rows.length > 0) {
         return {
           success: true,
+          code: 200,
           data: result.rows[0], // Admin found with the given verification code
         };
       } else {
         return {
           success: false,
-          errorData: "Verification code not found or expired",
+          code: 404,
+          errorData: {
+            message: "Verification code not found or expired",
+          }
         };
       }
     } catch (err) {
       return {
         success: false,
+        code: 500,
         errorData: err,
       };
     }

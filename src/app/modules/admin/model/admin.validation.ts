@@ -62,6 +62,12 @@ const inviteAdmin = z.object({
         invalid_type_error: "email must be string",
       })
       .refine(nonBlank, { message: "email cannot be blank" }),
+    password: z
+      .string({
+        required_error: "password required",
+        invalid_type_error: "password must be string",
+      })
+      .refine(nonBlank, { message: "password cannot be blank" }),
   });
   
   const setAdminPassword = z.object({

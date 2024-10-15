@@ -149,15 +149,14 @@ const inviteAdmin = async (
     res: express.Response<ApiResponse<any, any>>
   ) => {
     try {
-      const { user_id, email } = req.body;
+      const { user_id, email, password, mobile_no } = req.body;
       const validationResult = AdminValidationSchemas.inviteAdmin.safeParse({
         user_id,
         email,
+        password,
       });
-      if (
-        typeof validationResult.error !== "undefined" &&
-        validationResult.error.name === "ZodError"
-      ) {
+  
+      if (!validationResult.success) {
         const errorLists = validationResult.error.issues.map(
           (err: ZodIssue) => err.message
         );
@@ -170,48 +169,58 @@ const inviteAdmin = async (
           status: "error",
           result: JSON.stringify(errorLists),
         };
-        var eResult = UtilServices.storeEvent(storeEvent);
-        res.status(400).send({
+  
+        await UtilServices.storeEvent(storeEvent);
+        console.log("Error in inviteAdmin:", errorLists);
+        return res.status(400).send({
           status: "error",
           message: "Admin invitation failed",
           errorData: errorLists,
         });
-        return;
       }
-      if (validationResult.success) {
-        const result = await AdminServices.checkIfAdminExists(user_id);
-        if (result.success) {
-          const code = await AdminServices.generateVerificationCode();
-          const saveResult = await AdminServices.saveVerificationCode(
-            user_id,
-            code
-          );
-          if (saveResult.success) {
-            const setPasswordLink = `${config.client_url}/set-password/${code}`;
-            await sendEmail(email, setPasswordLink);
-            res.status(200).json({ status: "success", data: "Invitation sent." });
-          } else {
-            res.status(400).json({
-              status: "error",
-              message: "Failed to save verification code.",
-              errorData: saveResult.errorData,
-            });
-          }
-        } else {
-          res.status(400).json({
-            status: "error",
-            message: "Admin invitation failed",
-            errorData: result.errorData,
-          });
-        }
+  
+      const adminExists = await AdminServices.checkIfAdminExists(user_id);
+      if (adminExists) {
+        return res.status(400).send({
+          status: "error",
+          message: `Admin with user_id: [${user_id}] exists`,
+        });
+      }
+  
+      const result = await AdminServices.createAdmin(req.body);
+      console.log("Result in inviteAdmin:", result);
+      if (!result.success) {
+        return res.status(400).send({
+          status: "error",
+          message: "Admin invitation failed",
+          errorData: result.message,
+        });
+      }
+  
+      const code = await AdminServices.generateVerificationCode();
+      const saveResult = await AdminServices.saveVerificationCode(email, code);
+  
+      if (saveResult.success) {
+        const setPasswordLink = `${config.client_url}/set-password/${code}`;
+        await sendEmail(email, setPasswordLink);
+        return res.status(200).send({
+          status: "success",
+          data: result.data,
+        });
+      } else {
+        return res.status(500).send({
+          status: "error",
+          message: "Failed to save verification code.",
+          errorData: saveResult.errorData,
+        });
       }
     } catch (error) {
-      res.status(500).send({
+      console.error("Error in inviteAdmin:", error);
+      return res.status(500).send({
         status: "error",
-        message: "Error occurred",
+        message: "Internal Server Error",
         errorData: error,
       });
-      return;
     }
   };
   
