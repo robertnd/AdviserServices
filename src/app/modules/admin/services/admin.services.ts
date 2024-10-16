@@ -43,7 +43,7 @@ const adminSignIn = async (user_id: string, password: string): Promise<Result<an
             const token = jwt.sign({ id: user_id, role: 'admin' }, JWT_SECRET, jwtOptions)
             return { success: true, code: 200, data: token }
         } else {
-            return { success: false, code: 403, errorData: 'password is invalid' }
+            return { success: false, code: 403, message: 'password is invalid', errorData: 'password is invalid' }
         }
     } else {
         return result
@@ -62,7 +62,10 @@ const createAdmin = async (adminDto: AdminDto): Promise<Result<any, any>> => {
             data: { user_id: adminDto.user_id, email: adminDto.email, mobile_no: adminDto.mobile_no }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while creating admin'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -103,11 +106,16 @@ const generateVerificationCode = async (): Promise<string> => {
           errorData: `Admin with user_id: ${user_id} not found`,
         };
       }
-    } catch (error: any) {
-      console.error("Error saving verification code:", error);
+    } catch (err: any) {
+      console.error("Error saving verification code:", err)
+      const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while saving verification code'
       return {
         success: false,
-        errorData: error.message || "Unknown error occurred",
+        code: 500,
+        message,
+        errorData: message,
       };
     }
   };
@@ -192,9 +200,13 @@ const generateVerificationCode = async (): Promise<string> => {
         };
       }
     } catch (err) {
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while verifying admin'
       return {
         success: false,
         code: 500,
+        message,
         errorData: err,
       };
     }
@@ -217,7 +229,10 @@ const updateAdminStatus = async (user_id: string, status: string): Promise<Resul
             errorData = err.errorData
             code = err.code
         }
-        return { success: false, code, errorData }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while updating admin status'
+        return { success: false, code, message, errorData }
     }
 }
 
@@ -233,7 +248,10 @@ const updateAdviserStatus = async (user_id: string, status: string): Promise<Res
             throw new CustomError(message, 400, message)
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while updating adviser status'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -242,7 +260,7 @@ const updateAdviserStatus = async (user_id: string, status: string): Promise<Res
 // ------------------------------------------------------------------------------------------------------------
 
 const getApplicantFiles = async (user_id: string): Promise<Result<any, any>> => {
-    var code = 500, errorData
+    var code = 500, errorData, message
     try {
         const query = `SELECT id, user_id, file_desc, create_date FROM applicant_filedata WHERE user_id=$1`
         const result = await pool.query(query, [user_id])
@@ -250,13 +268,17 @@ const getApplicantFiles = async (user_id: string): Promise<Result<any, any>> => 
             return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
         } else {
             code = 400
+            message = `No records with user_id =${user_id} found`
             errorData = `No records with user_id =${user_id} found`
         }
     } catch (err) {
+        message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing files'
         errorData = err
     }
     return {
-        success: false, code, errorData
+        success: false, code, message, errorData
     }
 }
 
@@ -270,7 +292,7 @@ const getAdvisersWithConditionAndPaging = async (
     const page = vPage || 1;
     const page_size = pageSize
     const offset = (page - 1) * page_size;
-    var code, errorData
+    var code, errorData, message
     try {
         const queryAdvisers = `SELECT * FROM all_advisers WHERE ${filexp}=$1 LIMIT $2 OFFSET $3`
         const result = await pool.query(queryAdvisers, [filval, page_size, offset])
@@ -282,14 +304,18 @@ const getAdvisersWithConditionAndPaging = async (
             }
         } else {
             code = 400
+            message = `No records with ${filexp}=${filval} found`
             errorData = `No records with ${filexp}=${filval} found`
         }
     } catch (err) {
         code = 500
         errorData = err
+        message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing advisers'
     }
     return {
-        success: false, code, errorData
+        success: false, code, message, errorData
     }
 }
 
@@ -303,7 +329,7 @@ const getAdvisersWithNotConditionAndPaging = async (
     const page = vPage || 1;
     const page_size = pageSize
     const offset = (page - 1) * page_size;
-    var code, errorData
+    var code, errorData, message
     try {
         const queryAdvisers = `SELECT * FROM all_advisers WHERE ${filexp}!=$1 LIMIT $2 OFFSET $3`
         const result = await pool.query(queryAdvisers, [filval, page_size, offset])
@@ -315,14 +341,18 @@ const getAdvisersWithNotConditionAndPaging = async (
             }
         } else {
             code = 404
+            message = `No records with ${filexp}=${filval} found`
             errorData = `No records with ${filexp}=${filval} found`
         }
     } catch (err) {
         code = 500
         errorData = err
+        message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing advisers'
     }
     return {
-        success: false, code, errorData
+        success: false, code, message, errorData
     }
 }
 
@@ -332,7 +362,10 @@ const getAdvisersWithCondition = async (filexp: string, filval: string,): Promis
         const result = await pool.query(queryAdvisers, [filval])
         return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing advisers'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -342,7 +375,10 @@ const getAdvisersWithNotCondition = async (filexp: string, filval: string,): Pro
         const result = await pool.query(queryAdvisers, [filval])
         return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing advisers'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -366,9 +402,13 @@ const getAdvisersWithPaging = async (vPage: number, pageSize: number): Promise<R
             }
         }
     } catch (err) {
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing advisers'
         return {
             success: false,
             code: 500,
+            message,
             errorData: err
         }
     }
@@ -380,7 +420,10 @@ const getAdvisers = async (): Promise<Result<any, any>> => {
         const result: QueryResult<any> = await pool.query(queryAdvisers)
         return { success: true, code: 200, data: { total_items: result.rowCount, advisers: result.rows } }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing advisers'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -397,7 +440,10 @@ const getEventsWithConditionAndPaging = async (vPage: number, pageSize: number, 
             data: { page, page_size, total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing events'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -409,7 +455,10 @@ const getEventsWithCondition = async (filexp: string, filval: string): Promise<R
             success: true, code: 200, data: { total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing events'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -426,7 +475,10 @@ const getEventsWithPaging = async (vPage: number, pageSize: number): Promise<Res
             data: { page, page_size, total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing events'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -440,7 +492,10 @@ const getEvents = async (): Promise<Result<any, any>> => {
             data: { total_items: result.rowCount, events: result.rows }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing events'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -473,7 +528,10 @@ const getAdminsWithConditionAndPaging = async (
             code = err.code
             errorData = err.errorData
         }
-        return { success: false, code, errorData }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing admins'
+        return { success: false, code, message, errorData }
     }
 }
 
@@ -494,7 +552,10 @@ const getAdminsWithCondition = async (filexp: string, filval: string): Promise<R
             code = err.code
             errorData = err.errorData
         }
-        return { success: false, code, errorData }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing admins'
+        return { success: false, code, message, errorData }
     }
 }
 
@@ -511,7 +572,10 @@ const getAdminsWithPaging = async (vPage: number, pageSize: number): Promise<Res
             data: { page, page_size, total_items: result.rowCount, admins: result.rows }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing admins'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -525,7 +589,10 @@ const getAdmins = async (): Promise<Result<any, any>> => {
             data: { total_items: result.rowCount, admins: result.rows }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing admins'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -534,7 +601,7 @@ const getAdmins = async (): Promise<Result<any, any>> => {
 // ------------------------------------------------------------------------------------------------------------
 
 const getFile = async (file_id: number): Promise<Result<any, any>> => {
-    var code = 500, errorData
+    var code = 500, errorData, message
     try {
         const query = `SELECT file_data FROM applicant_filedata WHERE id=$1`
         const result = await pool.query(query, [ file_id ])
@@ -542,12 +609,16 @@ const getFile = async (file_id: number): Promise<Result<any, any>> => {
             return { success: true, code: 200, data: result.rows[0] }
         } else {
             code = 400
+            message = `No file with id =${file_id} found`
             errorData = `No file with id =${file_id} found`
         }
     } catch (err) {
         errorData = err
+        message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'Error getting file data'
     }
-    return { success: false, code, errorData }
+    return { success: false, code, message, errorData }
 }
 
 const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
@@ -567,11 +638,15 @@ const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
             return {
                 success: false,
                 code: 404,
+                message: `Adviser with user-id: ${user_id} not found`,
                 errorData: `Adviser with user-id: ${user_id} not found`
             }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An error occurred while processing admins'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 
@@ -586,10 +661,17 @@ const getEvent = async (event_id: number): Promise<Result<any, any>> => {
         if (result.rows.length > 0) {
             return { success: true, code: 200, data: result.rows[0] }
         } else {
-            return { success: false, code: 404, errorData: `Event with id: ${event_id} not found` }
+            return { success: false, 
+                code: 404, 
+                message: `Event with id: ${event_id} not found`, 
+                errorData: `Event with id: ${event_id} not found` 
+            }
         }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const message = err && typeof err == 'object' && 'message' in err 
+            ? `${err.message}`
+            : 'An getting event'
+        return { success: false, code: 500, message, errorData: err }
     }
 }
 

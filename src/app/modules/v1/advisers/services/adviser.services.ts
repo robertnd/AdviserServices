@@ -251,7 +251,11 @@ const createAdviser = async (
       }
     }
     console.log(JSON.stringify(err))
-    return { success: false, code: errCode, errorData }
+    const message =
+      err && typeof err == "object" && "message" in err
+        ? `${err.message}`
+        : "An error occurred while creating adviser"
+    return { success: false, code: errCode, message, errorData }
   } finally {
     client.release()
   }
@@ -273,7 +277,11 @@ const createAdviserApplicationFile = async (
     }
   } catch (err) {
     console.log(JSON.stringify(err))
-    return { success: false, code: 500, errorData: err }
+    const message =
+      err && typeof err == "object" && "message" in err
+        ? `${err.message}`
+        : "An error occurred while uploading file"
+    return { success: false, code: 500, message, errorData: err }
   }
 }
 
@@ -292,11 +300,16 @@ const setPassword = async (
       return {
         success: false,
         code: 400,
+        message: `Update failed. No matching records with id ${user_id}`,
         errorData: `Update failed. No matching records with id ${user_id}`,
       }
     }
   } catch (err) {
-    return { success: false, code: 500, errorData: err }
+    const message =
+      err && typeof err == "object" && "message" in err
+        ? `${err.message}`
+        : "An error occurred while setting password"
+    return { success: false, code: 500, message, errorData: err }
   }
 }
 
@@ -357,12 +370,22 @@ const signIn = async (
     } else {
       // TODO: usecase related stuff here
       // -> loginAttemptLogger( ... )
-      return { success: false, code: 403, errorData: "password is invalid" }
+      return {
+        success: false,
+        code: 403,
+        message: "Password is invalid",
+        errorData: "Password is invalid",
+      }
     }
   } else {
     // TODO: usecase related stuff here
     // -> loginAttemptLogger( ... )
-    return { success: false, code: 500, errorData: "Error computing digest" }
+    return {
+      success: false,
+      code: 500,
+      message: "Error computing digest",
+      errorData: "Error computing digest",
+    }
   }
 }
 
@@ -413,7 +436,8 @@ const getProfile = async (user_id: string): Promise<Result<any, any>> => {
       errors.push[credentials.errorData]
     if (adviser.success == false && adviser.errorData)
       errors.push[adviser.errorData]
-    return { success: false, code: 500, errorData: errors }
+      const message = 'An error occurred loading profiles'
+    return { success: false, code: 500, message, errorData: errors }
   }
 }
 

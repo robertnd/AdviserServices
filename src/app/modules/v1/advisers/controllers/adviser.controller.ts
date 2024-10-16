@@ -284,7 +284,7 @@ const signIn = async (req: express.Request, res: express.Response<ApiResponse<an
             user_id: user_id, event_type: 'sign in', endpoint: '', direction: 'in', process: 'signIn', status: 'error', result: JSON.stringify(result.errorData)
         }
         var eResult = UtilServices.storeEvent(storeEvent)
-        res.status(result.code).send({ status: 'error', message: 'Sign-in failed', errorData: result.errorData })
+        res.status(result.code).send({ status: 'error', message: result.message || 'Sign-in failed', errorData: result.errorData })
     }
 }
 
