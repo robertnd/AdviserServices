@@ -28,6 +28,12 @@ export enum AdviserStatus {
     Approved = 'Approved'
 }
 
+export enum AdminStatus {
+    Pending_Approval = 'Pending_Approval', 
+    Active = 'Active', 
+    Approved = 'Approved'
+}
+
 export enum CredentialStatus {
     Active = 'Active', 
     Expired = 'Expired', 

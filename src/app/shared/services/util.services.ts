@@ -132,7 +132,7 @@ const iprsQuery = async (identification: string, id_type: string): Promise<Resul
             const resp = await client.post(
                 IPRS_QUERY_API,
                 request,
-                { headers: { Authorization: `Bearer ${token.access_token}` } })
+                { headers: { Authorization: `Bearer ${token.access_token}` }, timeout: 45000 })
             const { data } = resp.data
             console.log(`@UtilService - Returned Profile: ${JSON.stringify(data)}`)
             return {

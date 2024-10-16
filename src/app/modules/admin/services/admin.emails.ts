@@ -1,7 +1,7 @@
-import nodemailer, { SentMessageInfo } from "nodemailer";
-import path from "path";
-import fs from "fs/promises";
-import config from "../../../config";
+import nodemailer, { SentMessageInfo } from "nodemailer"
+import path from "path"
+import fs from "fs/promises"
+import config from "../../../config"
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
     user: config.gmail_user,
     pass: config.gmail_app_password,
   },
-});
+})
 // TODO: make this reusable for other emails
 export const sendEmail = async (
   to: string,
@@ -20,17 +20,19 @@ export const sendEmail = async (
     "..",
     "templates",
     "InviteEmail.html"
-  );
-  let emailTemplate = await fs.readFile(templatePath, "utf8");
+  )
+  let emailTemplate = await fs.readFile(templatePath, "utf8")
   emailTemplate = emailTemplate.replace(
     "{{SET_PASSWORD_LINK}}",
     setPasswordLink
-  );
+  )
 
-  await transporter.sendMail({
+  const sendResult = await transporter.sendMail({
     from: `"OM-adviser" <${config.gmail_user}>`,
     to,
     subject: "Set Your Password",
     html: emailTemplate,
-  });
-};
+  })
+
+  return sendResult
+}
