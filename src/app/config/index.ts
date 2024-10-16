@@ -29,5 +29,8 @@ export default {
     om_iprs_secret: process.env.OM_IPRS_SECRET,
     om_partnermgmt_host: process.env.OM_PARTNERMGMT_HOST,
     om_partnermgmt_endpoint: process.env.OM_PARTNERMGMT_ENDPOINT,
-    om_partnermgmt_apikey: process.env.OM_PARTNERMGMT_APIKEY
+    om_partnermgmt_apikey: process.env.OM_PARTNERMGMT_APIKEY,
+    client_url: process.env.CLIENT_URL,
+    gmail_user: process.env.GMAIL_USER,
+    gmail_app_password: process.env.GMAIL_APP_PASSWORD,
 }

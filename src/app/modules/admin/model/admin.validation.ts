@@ -49,6 +49,48 @@ const adminStatusUpdate = z.object({
     status: z.enum(['Active', 'Expired', 'Invalid', 'Must_Reset', 'Not_Set'])
 })
 
+const inviteAdmin = z.object({
+    user_id: z
+      .string({
+        required_error: "user_id is required",
+        invalid_type_error: "user_id must be string",
+      })
+      .refine(nonBlank, { message: "user_id cannot be blank" }),
+    email: z
+      .string({
+        required_error: "email is required",
+        invalid_type_error: "email must be string",
+      })
+      .refine(nonBlank, { message: "email cannot be blank" }),
+    password: z
+      .string({
+        required_error: "password required",
+        invalid_type_error: "password must be string",
+      })
+      .refine(nonBlank, { message: "password cannot be blank" }),
+  });
+  
+  const setAdminPassword = z.object({
+    code: z
+      .string({
+        required_error: "code is required",
+        invalid_type_error: "code must be string",
+      })
+      .refine(nonBlank, { message: "code cannot be blank" }),
+    password: z
+      .string({
+        required_error: "password required",
+        invalid_type_error: "password must be string",
+      })
+      .refine(nonBlank, { message: "password cannot be blank" }),
+    email: z
+      .string({
+        required_error: "email is required",
+        invalid_type_error: "email must be string",
+      })
+      .refine(nonBlank, { message: "email cannot be blank" }),
+  });
+
 const dpAdviserStatusUpdate = z.object({
     user_id: z.string({
         required_error: "user_id required",
@@ -119,6 +161,8 @@ export const AdminValidationSchemas = {
     rootSignIn,
     adminSignIn,
     adminCreate,
+    inviteAdmin,
+    setAdminPassword,
     adminStatusUpdate,
     dpAdviserStatusUpdate,
     conditionCheck,

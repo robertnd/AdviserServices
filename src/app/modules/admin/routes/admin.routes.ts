@@ -111,6 +111,45 @@ router.post("/create-admin", AdminController.createAdmin)
 
 /**
  * @swagger
+ * /admin/invite-Admin
+ *  post:
+ *    summary: Sends invite email to created admin
+ *    description: Invites admin to set their password
+ *    security:
+ *      - bearerAuth: []
+ *    requestBody:
+ *      required: true
+ *      content:
+ *        application/json:
+ *          schema:
+ *            $ref: "#/components/schemas/InviteAdmin"
+ *    responses:
+ *      200:
+ *        description: Successful
+ *        content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *      400:
+ *         description: A client error occurred
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *      500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *
+ */
+
+router.post("/invite-admin", verifyToken, isRoot, AdminController.inviteAdmin);
+router.post("/set-admin-password", AdminController.setAdminPassword);
+
+/**
+ * @swagger
  * /admin/update-admin-status:
  *   post:
  *     summary: Updates the status of an Admin
