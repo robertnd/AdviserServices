@@ -2,6 +2,7 @@ import nodemailer, { SentMessageInfo } from "nodemailer"
 import path from "path"
 import fs from "fs/promises"
 import config from "../../../config"
+import axios from 'axios'
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -35,4 +36,29 @@ export const sendEmail = async (
   })
 
   return sendResult
+}
+
+export const sendEmailViaAPI = async (
+  to: string,
+  setPasswordLink: string
+): Promise<any> => {
+  const apiUrl = 'http://ec2-13-48-194-80.eu-north-1.compute.amazonaws.com:8090/send-email'
+  
+  const emailData = {
+    from: "athena@quantrica.com",
+    to: to,
+    body: setPasswordLink
+  }
+
+  try {
+    const response = await axios.post(apiUrl, emailData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error sending email via API:', error)
+    throw error
+  }
 }
