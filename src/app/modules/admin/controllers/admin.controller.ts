@@ -17,7 +17,7 @@ import {
 } from "../../../shared/dto/mocks/mock.data"
 import { AdviserStatus } from "../../../shared/constants"
 import { AdviserValidationSchemas } from "../../v1/advisers/model/adviser.validation"
-import { sendEmail } from "../services/admin.emails"
+import { sendEmailViaAPI } from "../services/admin.emails"
 
 // : Promise<void>
 const log: debug.IDebugger = debug("app:advisers-controller")
@@ -182,7 +182,7 @@ const inviteAdmin = async ( req: express.Request, res: express.Response<ApiRespo
     const saveResult = await AdminServices.saveVerificationCode(email, code)
     if (saveResult.success) {
       const setPasswordLink = `${config.client_url}/set-password/${code}`
-      await sendEmail(email, setPasswordLink)
+      await sendEmailViaAPI(email, setPasswordLink)
       return res.status(200).send({ status: "success", data: result.data, })
     } else {
       return res.status(500).send({ status: "error", message: "Failed to save verification code.", errorData: saveResult.errorData,

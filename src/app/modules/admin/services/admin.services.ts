@@ -153,7 +153,8 @@ const generateVerificationCode = async (): Promise<string> => {
           SET digest = $1, 
               is_verified = TRUE, 
               verification_code = NULL,
-              verification_code_expires_at = NULL
+              verification_code_expires_at = NULL,
+              status = 'Active'
           WHERE user_id = $2
           RETURNING *
         `;
