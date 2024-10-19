@@ -39,6 +39,7 @@ testem.log
 NOTES.txt
 RETIRED.txt
 /BKP
+AdviserWS.zip
 
 # Environment
 .env

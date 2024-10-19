@@ -15,7 +15,7 @@ import {
   RBAC,
 } from "../../../../shared/constants"
 import { CustomError } from "../../../../shared/CustomError"
-import { sendEmail } from "../../../admin/services/admin.emails"
+import { sendEmail, sendEmailViaAPI } from "../../../admin/services/admin.emails"
 import { AdminServices } from "../../../admin/services/admin.services"
 
 // ------------------------------------------------------------------------------------------------------------
@@ -212,7 +212,10 @@ const createAdviser = async (
           const code = await AdminServices.generateVerificationCode()
           await AdminServices.saveVerificationCode(primary_email, code)
           const setPasswordLink = `${config.client_url}/set-password/${code}`
-          const res = await sendEmail(recipients, setPasswordLink)
+          console.log('@createAdviser - Approval Status:', adviser_status)
+          console.log(`Sending mail to: [ ${recipients} ] with ${setPasswordLink} `)
+          const res = await sendEmailViaAPI(recipients, setPasswordLink)
+          console.log('@createAdviser - Sending Mail Result:', JSON.stringify(res))
         } else {
           throw new CustomError(
             results.message || "Error getting admin list",
@@ -220,6 +223,8 @@ const createAdviser = async (
             results.errorData
           )
         }
+      } else {
+        console.log('@createAdviser - Skipping mail, Approval Status:', adviser_status)
       }
     } catch (mailError) {
       console.log(JSON.stringify(mailError))

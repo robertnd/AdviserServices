@@ -56,6 +56,7 @@ export const sendEmailViaAPI = async (
         'Content-Type': 'application/json'
       }
     })
+    console.log('Mail sending response:', JSON.stringify(response))
     return response.data
   } catch (error) {
     console.error('Error sending email via API:', error)
