@@ -6,6 +6,7 @@ dotenv.config({ override:true })
 export default {
     port: process.env.PORT,
     serving_name: process.env.SERVING_NAME,
+    log_level: process.env.LOG_LEVEL,
     jwt_secret: process.env.JWT_SECRET,
     jwt_issuer: process.env.JWT_ISSUER,
     page_size: process.env.PAGE_SIZE,

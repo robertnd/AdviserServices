@@ -5,6 +5,7 @@ import { Result } from "../dto/result"
 import axios, { AxiosError, AxiosResponse } from "axios"
 import argon2 from "argon2"
 import { PartnerNumberRequest } from "../dto/external/partner_mgmt/request/partner.no.req"
+import { CustomError, ensureError } from "../CustomError"
 
 const otpStore = new Map<string, number>()
 const bagOfThings = new Map<string, any>()
@@ -57,9 +58,17 @@ const genQuery = async (table_or_view: string, filexp: string, filval: any): Pro
                 : result.rows[0]
             }
         }
-        else return { success: false, code: 404, errorData: `Data with ${filexp} = ${filval} not found` }
+        else {
+            const msg = `Data with ${filexp} = ${filval} not found`
+            // const errorData = new CustomError(msg, { cause: new Error(msg), context: {table_or_view, filexp, filval}})
+            const errorData = new Error('simulation')
+            return { success: false, code: 404, errorData }
+        }
     } catch (err) {
-        return { success: false, code: 500, errorData: err }
+        const newError = ensureError(err)
+        const errorData = new Error('the matrix is everywhere')
+        // const errorData = new CustomError('General query failed', { cause: newError, context: {table_or_view, filexp, filval}})
+        return { success: false, code: 500, errorData }
     }
 }
 

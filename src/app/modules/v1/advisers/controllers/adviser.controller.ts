@@ -10,6 +10,7 @@ import { ApiResponse } from '../../../../shared/dto/controllers/response/api.res
 import { hasher, UtilServices } from '../../../../shared/services/util.services'
 import { FileDataDto } from '../dto/applicant.file.dto'
 import { AdviserStatus, LegalEntityType, IntermediaryType, CredentialType, RBAC } from '../../../../shared/constants'
+import { Logger } from 'winston'
 
 // : Promise<void>
 const log: debug.IDebugger = debug('app:advisers-controller')
@@ -19,6 +20,7 @@ const migrateAdviser = async (req: express.Request, res: express.Response<ApiRes
     const validationResult = AdviserValidationSchemas.migratedAdviser.safeParse(req.body)
     if (typeof validationResult.error !== 'undefined' && validationResult.error.name === 'ZodError') {
         const errorLists = validationResult.error.issues.map((err: ZodIssue) => err.message)
+        Logger
         res.status(400).send({ status: 'error', message: 'Validation failed', errorData: errorLists })
         return
     }
@@ -42,25 +44,12 @@ const migrateAdviser = async (req: express.Request, res: express.Response<ApiRes
         res.status(400).send({ status: 'error', message, errorData: message })
         return
     } else {
-        const createResult = await AdviserServices.createAdviser(
-            regDto,
-            AdviserStatus.Approved,
-            LegalEntityType.person,
-            IntermediaryType.TBD,
-            CredentialType.adviser_admin,
-            RBAC.Registered
-        )
+        const createResult = await AdviserServices.createAdviser( regDto, AdviserStatus.Approved, LegalEntityType.person, IntermediaryType.TBD, CredentialType.adviser_admin, RBAC.Registered )
         if (createResult.success) {
             res.status(200).send({ status: 'success', data: createResult.data })
             return
         } else {
-            res.status(createResult.code).send({
-                status: 'error',
-                message: createResult.message
-                    ? createResult.message
-                    : 'Migration failed',
-                errorData: createResult.errorData
-            })
+            res.status(createResult.code).send({ status: 'error', message: createResult.message || 'Migration failed', errorData: createResult.errorData })
             return
         }
     }
@@ -107,9 +96,7 @@ const newAdviserApplication = async (req: express.Request, res: express.Response
         } else {
             res.status(createResult.code).send({
                 status: 'error',
-                message: createResult.message
-                    ? createResult.message
-                    : 'Creation (New Applicant) failed',
+                message: createResult.message || 'Creation (New Applicant) failed',
                 errorData: createResult.errorData
             })
             return
@@ -159,9 +146,7 @@ const newStaffUser = async (req: express.Request, res: express.Response<ApiRespo
         } else {
             res.status(createResult.code).send({
                 status: 'error',
-                message: createResult.message
-                    ? createResult.message
-                    : 'Creation (Staff) failed',
+                message: createResult.message || 'Creation (Staff) failed',
                 errorData: createResult.errorData
             })
             return
@@ -188,10 +173,8 @@ const saveFile = async (req: express.Request<{}, {}, FileDataDto>, res: express.
         const createResult = await AdviserServices.createAdviserApplicationFile(user_id, file_desc, file_data)
         if (createResult.success) {
             res.status(200).send({ status: 'success', data: {} })
-            return
         } else {
-            res.status(createResult.code).send({ status: 'error', message: 'Registration failed', errorData: createResult.errorData })
-            return
+            res.status(createResult.code).send({ status: 'error', message: createResult.message || 'Registration failed', errorData: createResult.errorData })
         }
     }
 }
@@ -208,7 +191,7 @@ const getAdviser = async (req: express.Request, res: express.Response<ApiRespons
     if (result.success) {
         res.status(200).send({ status: 'success', data: result.data })
     } else {
-        res.status(result.code).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+        res.status(result.code).send({ status: 'error', message: result.message || 'Get adviser faield', errorData: result.errorData })
     }
 }
 
@@ -224,7 +207,7 @@ const searchAdviser = async (req: express.Request, res: express.Response<ApiResp
     if (result.success) {
         res.status(200).send({ status: 'success', data: result.data })
     } else {
-        res.status(result.code).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+        res.status(result.code).send({ status: 'error', message: result.message ||  'Search adviser failed', errorData: result.errorData })
     }
 }
 
@@ -240,7 +223,7 @@ const getAdviserExternal = async (req: express.Request, res: express.Response<Ap
     if (result.success) {
         res.status(200).send({ status: 'success', data: result.data })
     } else {
-        res.status(result.code).send({ status: 'error', message: 'Failed', errorData: result.errorData })
+        res.status(result.code).send({ status: 'error', message: result.message || 'Get adviser failed', errorData: result.errorData })
     }
 }
 
