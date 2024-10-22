@@ -3,6 +3,7 @@ import path from "path"
 import fs from "fs/promises"
 import config from "../../../config"
 import axios from 'axios'
+import logger from "../../../shared/logging/logger"
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -56,9 +57,10 @@ export const sendEmailViaAPI = async (
         'Content-Type': 'application/json'
       }
     })
+    logger.log('Mail sending response:', response)
     return response.data
   } catch (error) {
-    console.error('Error sending email via API:', error)
+    logger.error('Error sending email via API:', error)
     throw error
   }
 }

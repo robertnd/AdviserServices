@@ -232,7 +232,7 @@ const updateAdminStatus = async ( req: express.Request<{}, {}, UpdateDto<any>>, 
     res.status(200).send({ status: "success", data: result, })
     return
   } else {
-    res.status(result.code).send({ status: "error", message: "Failed", errorData: result.errorData, })
+    res.status(result.code).send({ status: "error", message: result.message || "update admin status", errorData: result.errorData, })
     return
   }
 }
@@ -264,7 +264,7 @@ const updateAdviserStatus = async ( req: express.Request<{}, {}, UpdateDto<any>>
 
 const getApplicantFiles = async ( req: express.Request, res: express.Response<ApiResponse<any, any>> ) => {
   const { user_id } = req.params
-  const validationResult = AdviserValidationSchemas.user_id.safeParse({ user_id, })
+  const validationResult = AdviserValidationSchemas.user_id.safeParse({ user_id })
   if ( typeof validationResult.error !== "undefined" && validationResult.error.name === "ZodError" ) {
     const errorLists = validationResult.error.issues.map( (err: ZodIssue) => err.message )
     res
@@ -275,7 +275,7 @@ const getApplicantFiles = async ( req: express.Request, res: express.Response<Ap
         errorData: errorLists,
       })
     return
-  }
+  } 
   const result = await AdminServices.getApplicantFiles(user_id)
   if (result.success) {
     res.status(200).send({ status: "success", data: result.data })
@@ -339,22 +339,11 @@ const getNewApplicants = async ( req: express.Request, res: express.Response<Api
 }
 
 // Reverse case of getNewApplicants ( ! AdviserStatus.Pending_Approval)
-const getAdvisersWithPaging = async (
-  req: express.Request,
-  res: express.Response<ApiResponse<any, any>>
-) => {
+const getAdvisersWithPaging = async ( req: express.Request, res: express.Response<ApiResponse<any, any>> ) => {
   const { page, page_size } = req.params
-  const validationResult = AdminValidationSchemas.pagingCheck.safeParse({
-    page,
-    page_size,
-  })
-  if (
-    typeof validationResult.error !== "undefined" &&
-    validationResult.error.name === "ZodError"
-  ) {
-    const errorLists = validationResult.error.issues.map(
-      (err: ZodIssue) => err.message
-    )
+  const validationResult = AdminValidationSchemas.pagingCheck.safeParse({ page, page_size, })
+  if ( typeof validationResult.error !== "undefined" && validationResult.error.name === "ZodError" ) {
+    const errorLists = validationResult.error.issues.map( (err: ZodIssue) => err.message )
     res
       .status(400)
       .send({
@@ -372,12 +361,7 @@ const getAdvisersWithPaging = async (
     new_page = 1
   new_page = vPage <= 0 ? 1 : vPage
   new_limit = vLimit <= 0 || vLimit >= cfg_page_size ? cfg_page_size : vLimit
-  const result = await AdminServices.getAdvisersWithNotConditionAndPaging(
-    new_page,
-    new_limit,
-    "adviser_status",
-    AdviserStatus.Pending_Approval
-  )
+  const result = await AdminServices.getAdvisersWithNotConditionAndPaging( new_page, new_limit, "adviser_status", AdviserStatus.Pending_Approval )
   if (result.success) {
     res.status(200).send({ status: "success", data: result })
   } else {

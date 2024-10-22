@@ -14,22 +14,16 @@ import {
   LegalEntityType,
   RBAC,
 } from "../../../../shared/constants"
-import { CustomError } from "../../../../shared/CustomError"
-import { sendEmail } from "../../../admin/services/admin.emails"
+import { CustomError, ensureError } from "../../../../shared/CustomError"
+import { sendEmail, sendEmailViaAPI } from "../../../admin/services/admin.emails"
 import { AdminServices } from "../../../admin/services/admin.services"
+import logger from "../../../../shared/logging/logger"
 
 // ------------------------------------------------------------------------------------------------------------
 // Actions (add, update, delete)
 // ------------------------------------------------------------------------------------------------------------
 
-const createAdviser = async (
-  regDto: RegistrationDto,
-  adviser_status: AdviserStatus,
-  legal_entity_type: LegalEntityType,
-  intermediary_type: IntermediaryType,
-  credential_type: CredentialType,
-  rbac: RBAC
-): Promise<Result<any, any>> => {
+const createAdviser = async (regDto: RegistrationDto, adviser_status: AdviserStatus, legal_entity_type: LegalEntityType, intermediary_type: IntermediaryType, credential_type: CredentialType, rbac: RBAC): Promise<Result<any, any>> => {
   var digest = ""
   // These 4 inserts need to happen in concert
 
@@ -49,7 +43,11 @@ const createAdviser = async (
         regDto.adviser_user_id.toLowerCase() == regDto.user_id.toLowerCase()
       ) {
         var message = `user_id ( ${regDto.adviser_user_id} ) and adviser_user_id ( ${regDto.adviser_user_id} ) have the same value`
-        throw new CustomError(message, 400, message)
+        throw new CustomError(
+          message,
+          400,
+          { cause: new Error(message), context: ['createAdviser'] }
+        )
       }
       const searchRes = await AdviserServices.getCredentials(
         regDto.adviser_user_id
@@ -58,16 +56,19 @@ const createAdviser = async (
         const credential = searchRes.data
         if (credential.credential_type !== "adviser_admin") {
           var message = `${regDto.adviser_user_id}: Not an adviser admin`
-          throw new CustomError(message, 400, message)
+          throw new CustomError(
+            message,
+            404,
+            { cause: new Error(message), context: ['createAdviser'] }
+          )
         }
         adviser_id = credential.adviser_id
       } else {
-        // user staff creation failed ...
-        // 204 will blank the response
+        var message = `Error processing adviser`
         throw new CustomError(
-          searchRes.message || "Error processing adviser",
-          searchRes.code == 204 ? 404 : 500,
-          searchRes.errorData
+          message,
+          500,
+          { cause: new Error(message), context: ['create adviser'] }
         )
       }
     } else {
@@ -81,15 +82,7 @@ const createAdviser = async (
       }
       const insertAdviser = `INSERT INTO adviser ( kra_pin, account_no, partner_number, intermediary_type, legal_entity_type, country, status )
                                  VALUES ( $1, $2, $3, $4, $5, $6, $7) RETURNING *`
-      result1 = await client.query(insertAdviser, [
-        kraPIN,
-        accountNo,
-        partnerNumber,
-        intermediary_type,
-        legal_entity_type,
-        country,
-        adviser_status,
-      ])
+      result1 = await client.query(insertAdviser, [kraPIN, accountNo, partnerNumber, intermediary_type, legal_entity_type, country, adviser_status,])
       // get row id of inserted record
       adviser_id = result1.rows[0].id
     }
@@ -103,28 +96,12 @@ const createAdviser = async (
     const insertCreds = `INSERT INTO credentials ( user_id, email, mobile_no, adviser_id, digest, credential_type, status, rbac ) 
             VALUES ( $1, $2, $3, $4, $5, $6, $7, $8 ) RETURNING *`
     //var cred_type = 'adviser-admin'
-    const result2 = await client.query(insertCreds, [
-      user_id,
-      primary_email,
-      mobile_no,
-      adviser_id,
-      digest,
-      credential_type,
-      CredentialStatus.Not_Set,
-      rbac,
-    ])
+    const result2 = await client.query(insertCreds, [user_id, primary_email, mobile_no, adviser_id, digest, credential_type, CredentialStatus.Not_Set, rbac,])
 
     if (regDto.reg_type == "staff") {
       // Skip creating contacts for staff user
     } else {
-      var secondaryMobile,
-        secondaryEmail,
-        primaryPhone,
-        secondaryPhone,
-        primaryAddress,
-        secondaryAddress,
-        city,
-        secondaryCity
+      var secondaryMobile, secondaryEmail, primaryPhone, secondaryPhone, primaryAddress, secondaryAddress, city, secondaryCity
       if (typeof body == "object") {
         if ("secondary_mobile" in body)
           secondaryMobile = body.secondary_mobile || ""
@@ -142,20 +119,7 @@ const createAdviser = async (
       }
       const insertContacts = `INSERT INTO adviser_contacts ( adviser_id, mobile_no, secondary_mobile_no, primary_email, secondary_email, fixed_phone_no, secondary_fixed_phone_no, primary_address, secondary_address, city, secondary_city, country ) 
                 VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`
-      result3 = await client.query(insertContacts, [
-        adviser_id,
-        mobile_no,
-        secondaryMobile,
-        primary_email,
-        secondaryEmail,
-        primaryPhone,
-        secondaryPhone,
-        primaryAddress,
-        secondaryAddress,
-        city,
-        secondaryCity,
-        country,
-      ])
+      result3 = await client.query(insertContacts, [adviser_id, mobile_no, secondaryMobile, primary_email, secondaryEmail, primaryPhone, secondaryPhone, primaryAddress, secondaryAddress, city, secondaryCity, country,])
     }
 
     var result4
@@ -165,31 +129,14 @@ const createAdviser = async (
       const { date_of_birth } = body
       const insertPerson = `INSERT INTO adviser_person ( adviser_id, user_id, id_number, id_type, date_of_birth, first_name, last_name, full_names, gender ) 
                 VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 ) RETURNING *`
-      result4 = await client.query(insertPerson, [
-        adviser_id,
-        user_id,
-        id_number,
-        id_type,
-        date_of_birth,
-        first_name,
-        last_name,
-        full_names,
-        gender,
-      ])
+      result4 = await client.query(insertPerson, [adviser_id, user_id, id_number, id_type, date_of_birth, first_name, last_name, full_names, gender,])
     } else {
       // TODO: Internal testing only. No biz requirements yet
       const dateOfInc = new Date(Date.now()).toISOString()
       const names = "Big Bucks Agency"
       const insertNonPerson = `INSERT INTO adviser_nonperson ( adviser_id, user_id, id_number, id_type, date_of_incorporation, names ) 
                 VALUES ( $1, $2, $3, $4, $5, $6) RETURNING *`
-      result4 = await client.query(insertNonPerson, [
-        adviser_id,
-        user_id,
-        id_number,
-        id_type,
-        dateOfInc,
-        names,
-      ])
+      result4 = await client.query(insertNonPerson, [adviser_id, user_id, id_number, id_type, dateOfInc, names,])
     }
 
     await client.query("COMMIT")
@@ -212,29 +159,29 @@ const createAdviser = async (
           const code = await AdminServices.generateVerificationCode()
           await AdminServices.saveVerificationCode(primary_email, code)
           const setPasswordLink = `${config.client_url}/set-password/${code}`
-          const res = await sendEmail(recipients, setPasswordLink)
+          console.log('@createAdviser - Approval Status:', adviser_status)
+          console.log(`Sending mail to: [ ${recipients} ] with ${setPasswordLink} `)
+          const res = await sendEmailViaAPI(recipients, setPasswordLink)
+          console.log('@createAdviser - Sending Mail Result:', JSON.stringify(res))
         } else {
+          let message = results.message || 'Error getting admin list'
           throw new CustomError(
-            results.message || "Error getting admin list",
-            results.code,
-            results.errorData
+            message,
+            404,
+            { cause: new Error(message), context: ['create adviser', `status=${status}`, `user_id=${user_id}`] }
           )
         }
+      } else {
+        logger.info('@createAdviser - Skipping mail, Approval Status:', adviser_status)
       }
     } catch (mailError) {
-      console.log(JSON.stringify(mailError))
+      logger.error(JSON.stringify(mailError))
     }
 
     const created = {
       adviser: result1 && result1.rows[0] ? result1.rows[0] : {},
       credentials: result2.rows[0]
-        ? {
-            user_id,
-            email: primary_email,
-            mobile_no,
-            adviser_id,
-            credential_type,
-          }
+        ? { user_id, email: primary_email, mobile_no, adviser_id, credential_type }
         : {},
       contacts: result3 && result3.rows[0] ? result3.rows[0] : {},
       entity: result4.rows[0] ? result4.rows[0] : {},
@@ -242,53 +189,53 @@ const createAdviser = async (
     return { success: true, code: 200, data: created }
   } catch (err) {
     await client.query("ROLLBACK")
-    var errCode = 500
-    var errorData = err
-    if (err instanceof CustomError) {
-      errCode = err.code
-      if (err.errorData) {
-        errorData = err.errorData
-      }
+    let error = ensureError(err)
+    let context = '{}'
+    let [errorData, stack, code, message] = [error, error.stack, 500, 'An error occurred while creating adviser']
+    if (error instanceof CustomError) {
+      [errorData, stack, code, message] = [error, error.cause?.stack, error.code, error.message]
+      context = JSON.stringify(error.context)
     }
-    console.log(JSON.stringify(err))
-    const message =
-      err && typeof err == "object" && "message" in err
-        ? `${err.message}`
-        : "An error occurred while creating adviser"
-    return { success: false, code: errCode, message, errorData }
+    logger.error(stack)
+    return { success: false, code, message, errorData }
   } finally {
     client.release()
   }
 }
 
-const createAdviserApplicationFile = async (
-  user_id: string,
-  file_desc: string,
-  file_data: string
-): Promise<Result<any, any>> => {
+const createAdviserApplicationFile = async (user_id: string, file_desc: string, file_data: string): Promise<Result<any, any>> => {
   try {
     const query = `INSERT INTO applicant_filedata ( user_id, file_desc, file_data ) VALUES ( $1, $2, $3) RETURNING *`
     const result = await pool.query(query, [user_id, file_desc, file_data])
     const created = result.rows[0]
-    return {
-      success: true,
-      code: 200,
-      data: { user_id, row_id: created.id, file_desc },
+    if (result && result.rowCount && result.rowCount > 0) {
+      return {
+        success: true,
+        code: 200,
+        data: { user_id, row_id: created.id, file_desc },
+      }
+    } else {
+      let message = `Error processing [${file_desc}] file for ${user_id}`
+      throw new CustomError(
+        message,
+        404,
+        { cause: new Error(message), context: ['createAdviserApplicationFile', `file_desc=${file_desc}`, `user_id=${user_id}`] }
+      )
     }
   } catch (err) {
-    console.log(JSON.stringify(err))
-    const message =
-      err && typeof err == "object" && "message" in err
-        ? `${err.message}`
-        : "An error occurred while uploading file"
-    return { success: false, code: 500, message, errorData: err }
+    let error = ensureError(err)
+    let context = '{}'
+    let [errorData, stack, code, message] = [error, error.stack, 500, 'An error occurred while processing file']
+    if (error instanceof CustomError) {
+      [errorData, stack, code, message] = [error, error.cause?.stack, error.code, error.message]
+      context = JSON.stringify(error.context)
+    }
+    logger.error(stack)
+    return { success: false, code, message, errorData }
   }
 }
 
-const setPassword = async (
-  user_id: string,
-  password: string
-): Promise<Result<any, any>> => {
+const setPassword = async (user_id: string, password: string): Promise<Result<any, any>> => {
   try {
     const digest = await argon2.hash(password)
     const updateCreds = `UPDATE credentials SET digest=$1 WHERE user_id=$2 RETURNING *`
@@ -297,19 +244,23 @@ const setPassword = async (
     if (updated) {
       return { success: true, code: 200, data: result.rowCount }
     } else {
-      return {
-        success: false,
-        code: 400,
-        message: `Update failed. No matching records with id ${user_id}`,
-        errorData: `Update failed. No matching records with id ${user_id}`,
-      }
+      let message = `Update failed. No matching records with id ${user_id}`
+      throw new CustomError(
+        message,
+        404,
+        { cause: new Error(message), context: ['update admin status', `status=${status}`, `user_id=${user_id}`] }
+      )
     }
   } catch (err) {
-    const message =
-      err && typeof err == "object" && "message" in err
-        ? `${err.message}`
-        : "An error occurred while setting password"
-    return { success: false, code: 500, message, errorData: err }
+    let error = ensureError(err)
+    let context = '{}'
+    let [errorData, stack, code, message] = [error, error.stack, 500, 'An error occurred while updating admin status']
+    if (error instanceof CustomError) {
+      [errorData, stack, code, message] = [error, error.cause?.stack, error.code, error.message]
+      context = JSON.stringify(error.context)
+    }
+    logger.error(stack)
+    return { success: false, code, message, errorData }
   }
 }
 
@@ -390,28 +341,16 @@ const signIn = async (
 }
 
 const getCredentials = async (user_id: string): Promise<Result<any, any>> => {
-  const queryResult = await UtilServices.genQuery(
-    "credentials",
-    "user_id",
-    user_id
-  )
+  const queryResult = await UtilServices.genQuery( "credentials", "user_id", user_id )
   return queryResult
 }
 
 const getAdviser = async (user_id: string): Promise<Result<any, any>> => {
-  const queryResult = await UtilServices.genQuery(
-    "all_advisers",
-    "user_id",
-    user_id
-  )
+  const queryResult = await UtilServices.genQuery( "all_advisers", "user_id", user_id )
   return queryResult
 }
 
-const search = async (
-  table: string,
-  filexp: string,
-  filval: string
-): Promise<Result<any, any>> => {
+const search = async ( table: string, filexp: string, filval: string ): Promise<Result<any, any>> => {
   const queryResult = await UtilServices.genQuery(table, filexp, filval)
   return queryResult
 }
@@ -436,7 +375,7 @@ const getProfile = async (user_id: string): Promise<Result<any, any>> => {
       errors.push[credentials.errorData]
     if (adviser.success == false && adviser.errorData)
       errors.push[adviser.errorData]
-      const message = 'An error occurred loading profiles'
+    const message = 'An error occurred loading profiles'
     return { success: false, code: 500, message, errorData: errors }
   }
 }
