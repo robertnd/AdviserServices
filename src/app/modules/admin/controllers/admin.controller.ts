@@ -181,7 +181,7 @@ const inviteAdmin = async ( req: express.Request, res: express.Response<ApiRespo
     const code = await AdminServices.generateVerificationCode()
     const saveResult = await AdminServices.saveVerificationCode(email, code)
     if (saveResult.success) {
-      const setPasswordLink = `${config.client_url}/set-password/${code}`
+      const setPasswordLink = `${config.client_url}/#/set-password/${code}`
       await sendEmailViaAPI(email, setPasswordLink)
       return res.status(200).send({ status: "success", data: result.data, })
     } else {
